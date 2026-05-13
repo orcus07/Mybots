@@ -1,0 +1,633 @@
+{
+  "metadata": {
+    "generated_at": "2026-05-13",
+    "description": "CSP (Cloud Service Provider) custom chip architecture research — AWS, GCP, Azure, Oracle",
+    "sources": "Web research via 4 parallel sub-agents"
+  },
+  "aws": {
+    "graviton": [
+      {
+        "name": "Graviton1",
+        "generation": 1,
+        "released_year": 2018,
+        "designer": "Annapurna Labs (AWS subsidiary)",
+        "isa": "ARMv8-A (AArch64)",
+        "microarchitecture": "ARM Cortex-A72",
+        "core_count": 16,
+        "clock_speed_ghz": 2.3,
+        "process_node": "16nm",
+        "memory_type": "DDR4",
+        "hardware_acceleration": ["FP", "SIMD", "AES", "SHA-1", "SHA-256", "GCM", "CRC-32"],
+        "ec2_instances": ["a1.medium", "a1.large", "a1.xlarge", "a1.2xlarge", "a1.4xlarge", "a1.metal"],
+        "notes": "최초의 AWS 자체 CPU. 오픈소스 및 스케일아웃 워크로드 대상"
+      },
+      {
+        "name": "Graviton2",
+        "generation": 2,
+        "released_year": 2020,
+        "designer": "Annapurna Labs (AWS subsidiary)",
+        "isa": "ARMv8.2-A (AArch64)",
+        "microarchitecture": "ARM Neoverse N1",
+        "core_count": 64,
+        "clock_speed_ghz": 2.5,
+        "process_node": "7nm",
+        "memory_type": "DDR4-3200",
+        "memory_channels": 8,
+        "pcie_version": "PCIe 4.0",
+        "hardware_acceleration": ["FP", "SIMD/NEON", "AES", "SHA"],
+        "performance_vs_prev": {
+          "price_performance_vs_x86": "+40%",
+          "power_reduction_vs_x86": "-72%"
+        },
+        "ec2_instances": ["m6g", "m6gd", "c6g", "c6gd", "c6gn", "r6g", "r6gd", "t4g", "x2gd", "g5g", "im4gn", "is4gen", "i4g"],
+        "notes": "Graviton1 대비 7배 성능 향상, 5배 더 많은 코어"
+      },
+      {
+        "name": "Graviton3",
+        "generation": 3,
+        "released_year": 2022,
+        "designer": "Annapurna Labs (AWS subsidiary)",
+        "isa": "ARMv8.4-A (AArch64) + SVE",
+        "microarchitecture": "ARM Neoverse V1",
+        "core_count": 64,
+        "clock_speed_ghz": 2.6,
+        "process_node": "5nm",
+        "memory_type": "DDR5-4800",
+        "memory_channels": 8,
+        "pcie_version": "PCIe 5.0",
+        "hardware_acceleration": ["BF16 (ML)", "SVE", "FP", "AES", "SHA"],
+        "performance_vs_prev": {
+          "compute": "+25% vs Graviton2",
+          "floating_point": "2x vs Graviton2",
+          "crypto": "2x vs Graviton2",
+          "ml_workloads": "3x vs Graviton2 (BF16 지원)",
+          "memory_bandwidth": "+50% vs Graviton2"
+        },
+        "ec2_instances": ["c7g", "c7gd", "c7gn", "m7g", "m7gd", "r7g", "r7gd", "hpc7g"],
+        "notes": "BF16 데이터타입 네이티브 지원으로 ML 워크로드 가속"
+      },
+      {
+        "name": "Graviton4",
+        "generation": 4,
+        "released_year": 2023,
+        "designer": "Annapurna Labs (AWS subsidiary)",
+        "isa": "ARMv9.0-A (AArch64) + SVE2 + SVE2-crypto",
+        "microarchitecture": "ARM Neoverse V2",
+        "core_count": 96,
+        "clock_speed_ghz": 2.8,
+        "process_node": "4nm",
+        "l2_cache_total_mb": 192,
+        "memory_type": "DDR5-5600",
+        "memory_channels": 12,
+        "pcie_version": "PCIe 5.0",
+        "hardware_acceleration": ["SVE2", "SVE2-crypto", "BF16", "FP", "AES", "SHA"],
+        "performance_vs_prev": {
+          "databases": "+40% vs Graviton3",
+          "web_applications": "+30% vs Graviton3",
+          "java_applications": "+45% vs Graviton3"
+        },
+        "ec2_instances": ["r8g", "m8g", "c8g", "x8g"],
+        "notes": "ARMv9 아키텍처 최초 적용, SVE2-crypto 확장 지원"
+      }
+    ],
+    "trainium": [
+      {
+        "name": "Trainium1",
+        "generation": 1,
+        "released_year": 2022,
+        "purpose": "딥러닝 모델 학습(Training) 전용",
+        "neuroncore_version": "NeuronCore-v2",
+        "neuroncore_per_chip": 2,
+        "compute_per_chip": {
+          "bf16_tflops": 210,
+          "fp16_tflops": 210,
+          "fp32_tflops": 52.5
+        },
+        "supported_datatypes": ["FP32", "TF32", "BF16", "FP16", "UINT8", "cFP8"],
+        "hbm_per_chip_gb": 32,
+        "interconnect": "NeuronLink",
+        "ec2_instances": {
+          "trn1.2xlarge": {"trainium_chips": 1, "accelerator_memory_gb": 32},
+          "trn1.32xlarge": {"trainium_chips": 16, "accelerator_memory_gb": 512, "efa_bandwidth_gbps": 800},
+          "trn1n.32xlarge": {"trainium_chips": 16, "efa_bandwidth_gbps": 1600, "notes": "네트워크 강화 버전"}
+        },
+        "software_stack": "AWS Neuron SDK"
+      },
+      {
+        "name": "Trainium2",
+        "generation": 2,
+        "released_year": 2024,
+        "purpose": "대규모 LLM/생성형 AI 학습 및 추론",
+        "neuroncore_per_chip": 8,
+        "compute_per_chip": {
+          "fp8_dense_petaflops": 1.3,
+          "fp8_sparse_petaflops": 5.2
+        },
+        "hbm_per_chip_gb": 96,
+        "hbm_bandwidth_per_chip_tbs": 2.9,
+        "performance_vs_prev": "4x vs Trainium1",
+        "ec2_instances": {
+          "trn2.48xlarge": {
+            "trainium2_chips": 16,
+            "total_fp8_petaflops": 20.8,
+            "total_hbm_gb": 1536,
+            "efa_networking_tbps": 3.2
+          }
+        },
+        "ultraserver": {
+          "name": "Trn2 UltraServer",
+          "trainium2_chips": 64,
+          "total_fp8_petaflops": 83.2,
+          "total_hbm_tb": 6,
+          "total_memory_bandwidth_tbs": 185,
+          "efa_networking_tbps": 12.8,
+          "nodes": 4
+        },
+        "interconnect": "NeuronLink",
+        "software_stack": "AWS Neuron SDK",
+        "ga": "December 2024",
+        "price_performance_vs_gpu": "30-40% better than P5e/P5en instances"
+      }
+    ],
+    "inferentia": [
+      {
+        "name": "Inferentia1",
+        "generation": 1,
+        "released_year": 2019,
+        "purpose": "딥러닝 모델 추론(Inference) 전용",
+        "neuroncore_version": "NeuronCore-v1",
+        "neuroncore_per_chip": 4,
+        "memory_per_chip_gb": 8,
+        "memory_type": "DDR4",
+        "supported_datatypes": ["FP16", "BF16", "INT8"],
+        "ec2_instances": {
+          "inf1.xlarge": {"inferentia_chips": 1, "neuroncore_count": 4},
+          "inf1.6xlarge": {"inferentia_chips": 4, "neuroncore_count": 16},
+          "inf1.24xlarge": {"inferentia_chips": 16, "neuroncore_count": 64}
+        },
+        "software_stack": "AWS Neuron SDK",
+        "notes": "GPU 대비 최대 2.3x 처리량, 최대 70% 비용 절감"
+      },
+      {
+        "name": "Inferentia2",
+        "generation": 2,
+        "released_year": 2023,
+        "purpose": "고성능 생성형 AI 및 대규모 모델 추론",
+        "neuroncore_version": "NeuronCore-v2",
+        "neuroncore_per_chip": 2,
+        "compute_per_chip": {
+          "fp16_tflops": 190,
+          "bf16_tflops": 190
+        },
+        "hbm_per_chip_gb": 32,
+        "supported_datatypes": ["FP32", "TF32", "BF16", "FP16", "UINT8", "cFP8"],
+        "performance_vs_prev": {
+          "compute": "3x vs Inferentia1",
+          "total_memory": "4x vs Inferentia1",
+          "throughput": "4x vs Inferentia1",
+          "latency": "10x lower vs Inferentia1"
+        },
+        "interconnect": "NeuronLink (분산 추론 지원)",
+        "ec2_instances": {
+          "inf2.xlarge": {"inferentia2_chips": 1, "accelerator_memory_gb": 32},
+          "inf2.24xlarge": {"inferentia2_chips": 6, "accelerator_memory_gb": 192},
+          "inf2.48xlarge": {"inferentia2_chips": 12, "accelerator_memory_gb": 384, "compute_petaflops": 2.3}
+        },
+        "software_stack": "AWS Neuron SDK"
+      }
+    ],
+    "nitro": {
+      "name": "AWS Nitro System",
+      "introduced_year": 2017,
+      "purpose": "I/O 가상화, 보안 오프로드, 하이퍼바이저 경량화",
+      "components": {
+        "nitro_cards": [
+          {"name": "Nitro Card for VPC (ENA)", "function": "네트워킹 가상화 오프로드", "speeds": ["10GbE", "25GbE", "100GbE"]},
+          {"name": "Nitro Card for EBS", "function": "EBS 블록 스토리지 오프로드", "encryption": "하드웨어 AES"},
+          {"name": "Nitro Card for Local NVMe", "function": "로컬 스토리지 오프로드"},
+          {"name": "Nitro Card Controller", "function": "전체 시스템 관리/모니터링"}
+        ],
+        "nitro_security_chip": {
+          "function": "하드웨어 기반 Root of Trust",
+          "security_model": "zero-operator-access (AWS 운영자 포함 관리 접근 불가)"
+        },
+        "nitro_hypervisor": {
+          "based_on": "KVM 파생",
+          "characteristics": ["I/O를 Nitro Card로 완전 오프로드", "베어메탈 수준 성능", "최소 공격 표면"]
+        }
+      },
+      "supported_ec2_families": ["C5, M5, R5, T3", "모든 6세대 이후 인스턴스 (Graviton2~4 포함)", "모든 베어메탈 인스턴스"]
+    },
+    "summary": "AWS는 Annapurna Labs(2015년 인수) 기반으로 자체 실리콘 라인업을 구축했다. CPU는 ARM 기반 Graviton(1~4세대, 16nm→4nm, 16코어→96코어), ML 학습은 Trainium(1~2세대, trn1/trn2), ML 추론은 Inferentia(1~2세대, inf1/inf2)로 구성된다. Trainium2는 칩당 1.3 PF(FP8)/96GB HBM, GPU 대비 30~40% 비용 절감. 모든 인스턴스는 Nitro System(PCIe 카드 + 보안칩 + 경량 하이퍼바이저) 위에서 동작하며 베어메탈 수준 성능과 zero-operator 보안을 제공한다."
+  },
+  "gcp": {
+    "tpu": [
+      {
+        "version": "TPU v1",
+        "release_year": 2015,
+        "ga_public_cloud": null,
+        "architecture": {"array": "256×256 8-bit MACs", "process_node": "28nm", "clock_speed_mhz": 700},
+        "performance": {"peak_tops_int8": 92},
+        "memory": {"type": "on-chip SRAM", "capacity_gb": null},
+        "primary_use": "DNN inference (internal only)",
+        "gcp_instance_type": "N/A – internal only"
+      },
+      {
+        "version": "TPU v2",
+        "release_year": 2017,
+        "ga_public_cloud": 2018,
+        "performance": {"peak_tflops_bf16_per_chip": 45, "peak_tflops_bf16_per_board": 180, "peak_pflops_pod": 11.5},
+        "memory": {"type": "HBM", "capacity_gb_per_chip": 8, "capacity_gb_per_board": 32},
+        "interconnect": {"topology": "2D torus", "max_pod_chips": 512},
+        "primary_use": "Training + inference",
+        "gcp_instance_type": "Cloud TPU v2"
+      },
+      {
+        "version": "TPU v3",
+        "release_year": 2018,
+        "ga_public_cloud": 2019,
+        "architecture": {"cooling": "liquid"},
+        "performance": {"peak_tflops_bf16_per_board": 420, "peak_pflops_pod_1024chip": 100},
+        "memory": {"type": "HBM", "capacity_gb_per_board": 128},
+        "interconnect": {"topology": "3D torus", "max_pod_chips": 1024},
+        "primary_use": "Large-scale model training",
+        "gcp_instance_type": "Cloud TPU v3"
+      },
+      {
+        "version": "TPU v4",
+        "release_year": 2021,
+        "ga_public_cloud": 2022,
+        "performance": {"peak_tflops_bf16_per_chip": 275},
+        "memory": {"type": "HBM"},
+        "interconnect": {"topology": "3D mesh (reconfigurable)", "max_pod_chips": 4096},
+        "primary_use": "Large-scale LLM training (PaLM, Gemini)",
+        "gcp_instance_type": "Cloud TPU v4"
+      },
+      {
+        "version": "TPU v5e",
+        "release_year": 2023,
+        "ga_public_cloud": 2023,
+        "architecture": {"note": "Cost-efficiency optimized; 2.3× better price-performance vs v4"},
+        "performance": {"peak_tflops_bf16_per_chip": 197, "peak_tops_int8_per_chip": 393},
+        "memory": {"type": "HBM", "capacity_gb_per_chip": 16, "bandwidth_gbps_per_chip": 819},
+        "interconnect": {"topology": "3D torus", "max_pod_chips": 256},
+        "primary_use": "Cost-efficient training & inference (<200B params)",
+        "gcp_instance_type": "Cloud TPU v5e"
+      },
+      {
+        "version": "TPU v5p",
+        "release_year": 2023,
+        "ga_public_cloud": 2023,
+        "architecture": {"note": ">2× FLOPS and 3× HBM vs v4"},
+        "performance": {"peak_tflops_bf16_per_chip": 459},
+        "memory": {"type": "HBM", "capacity_gb_per_chip": 95, "bandwidth_gbps_per_chip": 2765},
+        "interconnect": {"topology": "3D torus", "max_pod_chips": 8960, "ici_bandwidth_gbps_per_chip": 4800},
+        "primary_use": "Frontier-scale LLM training (Gemini Ultra-class)",
+        "gcp_instance_type": "Cloud TPU v5p"
+      },
+      {
+        "version": "TPU v6e",
+        "codename": "Trillium",
+        "release_year": 2024,
+        "ga_public_cloud": 2024,
+        "architecture": {"note": "4.7× compute vs v5e; 67% more energy-efficient"},
+        "performance": {"peak_tflops_bf16_per_chip": 918},
+        "memory": {"type": "HBM", "capacity_gb_per_chip": 32, "bandwidth_gbps_per_chip": 1600},
+        "interconnect": {"topology": "high-bandwidth ICI", "max_pod_chips": 256},
+        "primary_use": "Transformer training/fine-tuning/serving",
+        "gcp_instance_type": "Cloud TPU v6e"
+      }
+    ],
+    "axion": {
+      "product_name": "Google Axion Processor",
+      "generation": "1st",
+      "announcement_year": 2024,
+      "ga_year": 2024,
+      "architecture": {
+        "isa": "ARMv9.0-A 64-bit",
+        "core_design": "Arm Neoverse V2",
+        "max_cores_per_processor": 72,
+        "l3_cache_mb": 80
+      },
+      "memory": {"type": "DDR5", "max_capacity_gb": 576},
+      "networking": {"standard_bandwidth_gbps": 50, "tier1_bandwidth_gbps": 100},
+      "performance_claims": {
+        "vs_arm_cloud_peers": "Up to 10% better price-performance",
+        "vs_x86_comparable": "Up to 65% better price-performance, 60% better energy-efficiency"
+      },
+      "gcp_instance_type": {
+        "family": "C4A",
+        "configurations": [
+          {"type": "Standard", "vcpu_to_memory_ratio": "1:4", "max_vcpus": 72},
+          {"type": "HighMem", "vcpu_to_memory_ratio": "1:8", "max_vcpus": 72},
+          {"type": "HighCPU", "vcpu_to_memory_ratio": "1:2", "max_vcpus": 72}
+        ]
+      }
+    },
+    "infrastructure_chips": [
+      {
+        "name": "Titan",
+        "category": "Security Microcontroller",
+        "purpose": "Hardware root-of-trust; secure boot integrity",
+        "key_capabilities": [
+          "First-instruction boot firmware integrity",
+          "Public-key cryptography boot verification",
+          "Protects against rootkits and privileged software attacks"
+        ],
+        "deployment": "All GCP server hardware",
+        "first_announced": 2017
+      },
+      {
+        "name": "Titanium",
+        "category": "Offload / SmartNIC System",
+        "purpose": "Hardware offload of networking, storage I/O, virtualization",
+        "components": [
+          "Titanium Adapter (SmartNIC)",
+          "Titanium Offload Processors (TOPs)",
+          "Titanium SSD"
+        ],
+        "key_capabilities": [
+          "Frees 100% host CPU for customer workloads",
+          "25% faster block storage IOPS vs competitors"
+        ],
+        "gcp_instance_types_supported": ["C3", "C3D", "C4", "C4A", "C4D", "H3", "H4D"],
+        "first_announced": 2023
+      },
+      {
+        "name": "Jupiter",
+        "category": "Data Center Network Fabric",
+        "purpose": "Internal data center network powering all GCP regions",
+        "architecture": {
+          "switching_technology": "Optical Circuit Switching (OCS) via MEMS mirrors",
+          "link_speed": "400 Gb/s",
+          "total_bisection_bandwidth_pbs": 13.1
+        },
+        "key_capabilities": [
+          "13.1 Pb/s total bisection bandwidth",
+          "5× higher speed vs earlier generations",
+          "30% capex reduction, 41% power reduction"
+        ]
+      }
+    ],
+    "summary": "GCP는 AI/ML 가속용 TPU(v1~v6e Trillium, 92 TOPS→918 TFLOPS BF16), 컴퓨팅용 Axion(ARM Neoverse V2, 72코어, C4A), 인프라용 Titan(보안), Titanium(I/O 오프로드), Jupiter(400G OCS 네트워크 패브릭)로 구성된 자체 실리콘 포트폴리오를 보유한다. TPU v5p(459 TFLOPS, 8960칩 포드)는 Gemini Ultra급 훈련에, Trillium(v6e, 918 TFLOPS)은 차세대 추론/파인튜닝에 특화된다."
+  },
+  "azure": {
+    "cobalt": {
+      "cobalt_100": {
+        "type": "ARM 기반 서버 CPU",
+        "architecture": "Arm Neoverse N2",
+        "core_count": 128,
+        "clock_speed_ghz": 3.4,
+        "process_node": "TSMC 5nm",
+        "announced": "2023-11 (Microsoft Ignite 2023)",
+        "ga": "2024-10",
+        "memory_type": "DDR5",
+        "key_feature": "vCPU당 물리 코어 1:1 매핑",
+        "azure_vm_series": [
+          {"series": "Dpsv6", "type": "범용", "max_vcpus": 96, "max_ram_gib": 384},
+          {"series": "Dplsv6", "type": "범용 저메모리", "max_vcpus": 96, "max_ram_gib": 192},
+          {"series": "Epsv6", "type": "메모리 최적화", "max_vcpus": 96, "max_ram_gib": 672}
+        ],
+        "performance_vs_prev_gen": "이전 세대 ARM VM 대비 최대 50% 향상된 가격/성능"
+      },
+      "cobalt_200": {
+        "type": "ARM 기반 서버 CPU (차세대)",
+        "architecture": "Arm Neoverse V3 (2-chiplet)",
+        "core_count": 132,
+        "cores_per_chiplet": 66,
+        "process_node": "TSMC 3nm",
+        "l3_cache_mb": 192,
+        "memory_channels": 12,
+        "memory_type": "DDR5",
+        "announced": "2025-11",
+        "ga": "2026 예정",
+        "performance_vs_cobalt_100": "최대 50% 성능 향상"
+      }
+    },
+    "maia": {
+      "maia_100": {
+        "type": "AI 가속기 ASIC (1세대)",
+        "announced": "2023-11 (Microsoft Ignite 2023)",
+        "process_node": "TSMC N5 (5nm)",
+        "die_size_mm2": 820,
+        "packaging": "CoWoS-S",
+        "flops": {
+          "int6_pops": 3.0,
+          "int9_pops": 1.5,
+          "bf16_pflops": 0.8
+        },
+        "memory": {"type": "HBM2E", "stack_count": 4, "total_capacity_gb": 64, "bandwidth_tbps": 1.8},
+        "networking": {"bandwidth_per_accelerator_tbps": 4.8},
+        "tdp_w": 700,
+        "deployment": {
+          "status": "내부 운영 전용 (고객 VM 미제공)",
+          "internal_services": ["Microsoft Copilot", "Azure OpenAI Service", "Microsoft Defender AI"]
+        }
+      },
+      "maia_200": {
+        "type": "AI 가속기 ASIC (2세대, 추론 특화)",
+        "announced": "2026-01",
+        "process_node": "TSMC 3nm",
+        "focus": "추론(Inference) 최적화",
+        "tensor_cores": "FP8 / FP4 네이티브",
+        "memory": {"type": "HBM3e", "total_capacity_gb": 216},
+        "tdp_w": 750,
+        "deployment_regions": ["US Central (Iowa)", "US West 3 (Phoenix, 예정)"]
+      }
+    },
+    "azure_boost": {
+      "overview": "스토리지/네트워킹/보안을 호스트 CPU에서 분리·오프로드하는 커스텀 DPU 플랫폼",
+      "origin": "Fungible(DPU 전문) 기술 기반 (2023년 인수)",
+      "architecture": {"type": "Arm 코어 + FPGA 혼합 SoC"},
+      "generations": {
+        "gen1": {
+          "network_bandwidth_gbps": 200,
+          "remote_storage_throughput_gbps": 14,
+          "remote_storage_iops": 750000,
+          "local_nvme_throughput_gbps": 36,
+          "local_nvme_iops": 6600000,
+          "ga": "2023"
+        },
+        "gen2_overlake": {
+          "network_bandwidth_gbps": 400,
+          "remote_storage_throughput_gbps": 20,
+          "remote_storage_iops": 1000000,
+          "announced": "2025 (Ignite 2025)"
+        }
+      },
+      "efficiency_gains": {
+        "performance_vs_existing": "4배",
+        "power_vs_existing": "1/3 전력"
+      },
+      "supported_vm_families": ["Dpsv6 (Cobalt 100)", "Dplsv6", "Epsv6", "기타 v6 세대 이상"]
+    },
+    "fpga": {
+      "project_catapult": {
+        "started": 2010,
+        "first_pilot_deployment": 2013,
+        "large_scale_deployment": 2015,
+        "scale": "수백만 대 이상, 6개 대륙, 60개 이상 리전"
+      },
+      "versions": [
+        {"name": "Catapult v1", "year": 2013, "use_case": "Bing 검색 랭킹 가속 (파일럿)"},
+        {"name": "Catapult v2 (Pikes Peak / Story Peak)", "year": 2015, "use_case": "Bing + Azure 클라우드 네트워크 가속"},
+        {
+          "name": "Catapult v3 (Dragontails Peak / Longs Peak)",
+          "year": 2017,
+          "fpga_chip": "Intel Arria 10",
+          "fpga_ddr4_gb": 4,
+          "network_speed_gbps": 50,
+          "use_cases": ["DNN 가속", "SDN 오프로드"]
+        }
+      ],
+      "smartnic_azure": {
+        "service_name": "AccelNet (Accelerated Networking)",
+        "available_since": 2016,
+        "latency_vm_to_vm_us": "<15",
+        "throughput_gbps": 32,
+        "current_role": "Azure Boost SoC 내 FPGA 모듈로 통합"
+      }
+    },
+    "summary": "Azure는 CPU(Cobalt 100/200), AI 가속기(Maia 100/200), 인프라 오프로드(Azure Boost DPU), FPGA(Catapult/AccelNet)로 구성된 자체 실리콘 포트폴리오를 구축했다. Cobalt 100(128코어 ARM N2, 5nm, 2024 GA)은 Dpsv6/Epsv6로 고객에 제공. Maia 100(HBM2E 64GB, 0.8 PFLOPS BF16)은 내부 전용, Maia 200(HBM3e 216GB, TSMC 3nm)은 2026 추론 특화. Azure Boost(200~400Gbps, 36GB/s NVMe)는 Fungible 기술 기반 DPU SoC."
+  },
+  "oracle": {
+    "ampere": {
+      "overview": "OCI는 자체 CPU 미개발. Ampere Computing 파트너십으로 ARM 기반 인스턴스 제공 (A1→A2→A4 3세대)",
+      "generations": [
+        {
+          "name": "Ampere Altra (A1 세대)",
+          "processor_model": "Ampere Altra Q80-30",
+          "architecture": "ARM v8.2 (64-bit)",
+          "cores_per_socket": 80,
+          "max_frequency_ghz": 3.0,
+          "threads_per_core": 1,
+          "ocpu_mapping": "1 OCPU = 1 물리 코어",
+          "oci_instance_shapes": ["VM.Standard.A1.Flex (최대 80 OCPU, 512GB RAM)", "BM.Standard.A1.160 (160 OCPU, 1TB RAM)"],
+          "launch_year": 2021
+        },
+        {
+          "name": "AmpereOne (A2 세대)",
+          "processor_model": "Ampere AmpereOne A160-30",
+          "architecture": "ARM v8.6 (64-bit), 커스텀 코어",
+          "cores_per_socket": 160,
+          "max_frequency_ghz": 3.0,
+          "threads_per_core": 2,
+          "ocpu_mapping": "1 OCPU = 2 물리 코어",
+          "l2_cache_per_core_mb": 2,
+          "oci_instance_shapes": ["VM.Standard.A2.Flex (최대 78 OCPU)", "BM.Standard.A2.160"],
+          "launch_year": 2023,
+          "performance_vs_a1": "평균 28% 향상 (MySQL 59%, Postgres 27%, Nginx 18%)"
+        },
+        {
+          "name": "AmpereOne M (A4 세대)",
+          "processor_model": "Ampere AmpereOne M A06-36M (Polaris 코어)",
+          "architecture": "ARM v9.0 (64-bit)",
+          "cores_per_socket": 96,
+          "max_frequency_ghz": 3.6,
+          "threads_per_core": 2,
+          "memory_channels": 12,
+          "memory_type": "DDR5",
+          "networking": "100G",
+          "oci_instance_shapes": ["VM.Standard.A4.Flex", "BM.Standard.A4.96 (Acceleron 통합)"],
+          "launch_year": 2025,
+          "ga_regions": ["Ashburn (IAD)", "Phoenix (PHX)", "Frankfurt (FRA)", "London (LHR)"],
+          "pricing_ocpu_hour_usd": 0.0138,
+          "performance_vs_prev": "CPU 주파수 20% 향상, 메모리 대역폭 2배"
+        }
+      ]
+    },
+    "sparc": {
+      "overview": "Sun Microsystems 인수 후 계승한 RISC 아키텍처. 2017년 M8을 마지막으로 개발 종료. OCI에서는 클라우드 인스턴스 미제공.",
+      "architecture_base": "SPARC V9 (64-bit RISC), sun4v",
+      "key_feature": "Chip Multithreading Technology (CMT)",
+      "notable_models": [
+        {"name": "UltraSPARC T1", "year": 2005, "cores": 8, "threads": 32, "max_freq_ghz": 1.2},
+        {"name": "UltraSPARC T2", "year": 2007, "cores": 8, "threads": 64},
+        {"name": "SPARC T4", "year": 2011, "cores": 8, "threads": 64, "max_freq_ghz": 3.0, "notes": "단일 스레드 성능 강화"},
+        {"name": "SPARC M7", "year": 2015, "cores": 32, "threads": 256, "notes": "DAX v1 탑재"},
+        {"name": "SPARC M8", "year": 2017, "cores": 32, "threads": 256, "max_freq_ghz": 5.0, "notes": "DAX v2 탑재, 마지막 세대"}
+      ],
+      "end_of_development": "2017년 9월 (Oracle Labs SPARC 팀 해체)",
+      "cloud_status": "OCI 클라우드 인스턴스 미제공 (레거시 온프레미스 잔존)"
+    },
+    "networking": {
+      "rdma_cluster_networking": {
+        "overview": "HPC/AI 워크로드용 초고성능 RDMA 네트워크",
+        "technology": "RDMA over Converged Ethernet v2 (RoCEv2)",
+        "current_nic": "NVIDIA ConnectX-5 (100 Gb/s)",
+        "ai_supercluster_nic": "NVIDIA ConnectX-9 SuperNIC (1.6 Tb/s, Vera Rubin 세대)",
+        "latency": "싱글 디짓 마이크로초",
+        "max_cluster_size_gpu": 131072,
+        "networking_speed_per_cluster": "최대 3.2 Tb/s (16,000 GPU 비차단)",
+        "instance_shapes": ["BM.HPC2.36 (100Gbps RDMA)", "BM.Optimized3.36", "BM.HPC.E5", "BM.GPU.* 시리즈 전체"]
+      },
+      "oracle_acceleron": {
+        "overview": "Oracle 자체 설계 Converged NIC (CNIC) — OCI 유일의 독자 실리콘",
+        "chip_name": "Oracle Acceleron CNIC",
+        "key_innovation": "Host NIC + Cloud Control Computer(CCC)를 단일 칩으로 통합",
+        "isolation_model": "하드웨어 정적 파티셔닝 (고객 플레인 vs Oracle 관리 플레인)",
+        "capabilities": [
+          "NVMe over TCP 스토리지 가속",
+          "라인 레이트 암호화",
+          "베어메탈 NIC 무중단 패치",
+          "Zero-Trust Packet Routing",
+          "최대 2배 네트워크 처리량 향상"
+        ],
+        "announced": "Oracle AI World 2025 (2025-10)",
+        "integrated_shapes": ["E6 Standard/DenseIO Acceleron", "X12 Standard Acceleron (Intel Xeon 6)", "A4 Standard Acceleron (AmpereOne M)"]
+      },
+      "amd_pensando_partnership": {
+        "overview": "AMD Pensando DPU 기반 Converged NIC 협력 개발 중",
+        "pensando_chip": "AMD Pensando Elba DPU (듀얼 200 Gb/s, P4 프로그래머블)",
+        "oci_integration": "2026년 초 출시 예정"
+      }
+    },
+    "ai_accelerators": {
+      "strategy": "자체 AI 가속기 칩 미개발. NVIDIA 및 AMD GPU 파트너십 기반 전략 (Oracle 공식 확인 2024).",
+      "nvidia_partnership": {
+        "current_gpu_portfolio": [
+          {"gpu": "NVIDIA H100 SXM5 (80GB HBM2e)", "shape": "BM.GPU.H100.8", "gpus_per_node": 8},
+          {"gpu": "NVIDIA H200 (141GB HBM3e)", "shape": "BM.GPU.H200.8", "gpus_per_node": 8},
+          {"gpu": "NVIDIA B200 / GB200 Blackwell", "shape": "BM.GPU.B200.*", "ga": "2025"},
+          {"gpu": "NVIDIA L40S (48GB GDDR6)", "shape": "BM.GPU.L40S.4", "gpus_per_node": 4},
+          {"gpu": "NVIDIA A100 (80GB HBM2e)", "shape": "BM.GPU.A100", "host_cpu": "AMD EPYC 7J13"}
+        ],
+        "future_roadmap": {
+          "platform": "NVIDIA Vera Rubin",
+          "oci_availability": "2026년 하반기",
+          "peak_performance_per_chip_pflops": 50,
+          "components": ["Rubin GPU", "Vera CPU (88 Olympus ARM 코어)", "BlueField-4 DPU", "ConnectX-9 SuperNIC (1.6 Tb/s)"]
+        }
+      },
+      "amd_partnership": {
+        "current_gpu_portfolio": [
+          {"gpu": "AMD Instinct MI300X (192GB HBM3)", "shape": "BM.GPU.MI300X.8", "gpus_per_node": 8, "price_per_gpu_hour_usd": 6.0},
+          {"gpu": "AMD Instinct MI355X (288GB HBM3E)", "shape": "BM.GPU.MI355X.8", "gpus_per_node": 8, "ga_date": "2025-10"}
+        ],
+        "future_roadmap": {
+          "gpu": "AMD Instinct MI450",
+          "oci_role": "런치 파트너 (첫 공개 AI 슈퍼클러스터)",
+          "deployment_start": "2026 Q3",
+          "initial_scale_gpu": 50000,
+          "memory_per_gpu_gb": 432,
+          "memory_type": "HBM4",
+          "memory_bandwidth_per_gpu_tbs": 20
+        }
+      }
+    },
+    "instance_type_chip_mapping": {
+      "arm_instances": {
+        "VM.Standard.A1.Flex / BM.Standard.A1.160": "Ampere Altra Q80-30",
+        "VM.Standard.A2.Flex / BM.Standard.A2.160": "Ampere AmpereOne A160-30",
+        "VM.Standard.A4.Flex / BM.Standard.A4.96": "Ampere AmpereOne M A06-36M + Oracle Acceleron CNIC"
+      },
+      "gpu_instances": {
+        "BM.GPU.H100.8": "8x NVIDIA H100 SXM5",
+        "BM.GPU.H200.8": "8x NVIDIA H200",
+        "BM.GPU.MI300X.8": "8x AMD Instinct MI300X",
+        "BM.GPU.MI355X.8": "8x AMD Instinct MI355X"
+      }
+    },
+    "summary": "Oracle OCI는 자체 CPU나 AI 가속기를 개발하지 않고 Ampere(ARM CPU)·NVIDIA·AMD 파트너십 기반 전략을 채택한다. 독자 실리콘은 Oracle Acceleron CNIC(2025 발표)이 유일하며, Host NIC + Cloud Control Computer를 단일 칩으로 통합해 네트워크 오프로드를 담당한다. SPARC 프로세서는 2017년 M8(5.0GHz, 32코어, 256스레드)으로 개발이 종료됐다. 향후 NVIDIA Vera Rubin(2026 H2)과 AMD MI450(2026 Q3, 런치 파트너, 50K GPU)이 핵심 AI 인프라 로드맵을 이룬다."
+  }
+}
