@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSP Chip Architecture — Rack to Silicon</title>
+<style>
+:root {
+  --bg: #0d1117;
+  --bg2: #161b22;
+  --bg3: #21262d;
+  --bg4: #30363d;
+  --border: #30363d;
+  --text: #e6edf3;
+  --text2: #8b949e;
+  --text3: #6e7681;
+
+  --aws:    #ff9900;
+  --gcp:    #4285f4;
+  --azure:  #0078d4;
+  --oracle: #f80000;
+
+  --cpu:    #58a6ff;
+  --gpu:    #3fb950;
+  --tpu:    #bc8cff;
+  --hbm:    #ff7b72;
+  --ddr:    #ffa657;
+  --nic:    #79c0ff;
+  --npu:    #d2a8ff;
+  --power:  #f0883e;
+  --link:   #56d364;
+  --rack:   #484f58;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+header {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  padding: 18px 28px;
+  display: flex; align-items: center; gap: 14px;
+}
+header h1 { font-size: 18px; font-weight: 700; letter-spacing: -.3px; }
+header p  { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+.csp-tabs {
+  display: flex; gap: 0;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  padding: 0 28px;
+  overflow-x: auto;
+}
+.csp-tab {
+  padding: 10px 20px;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  font-weight: 600;
+  font-size: 13px;
+  white-space: nowrap;
+  transition: all .15s;
+  color: var(--text2);
+}
+.csp-tab:hover { color: var(--text); background: var(--bg3); }
+.csp-tab.active { color: var(--text); border-bottom-color: var(--text); }
+.csp-tab[data-csp="aws"].active    { border-bottom-color: var(--aws); color: var(--aws); }
+.csp-tab[data-csp="gcp"].active    { border-bottom-color: var(--gcp); color: var(--gcp); }
+.csp-tab[data-csp="azure"].active  { border-bottom-color: var(--azure); color: var(--azure); }
+.csp-tab[data-csp="oracle"].active { border-bottom-color: var(--oracle); color: var(--oracle); }
+
+.gen-bar {
+  display: flex; gap: 8px;
+  padding: 14px 28px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+}
+.gen-btn {
+  padding: 5px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--bg3);
+  color: var(--text2);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: all .15s;
+}
+.gen-btn:hover { background: var(--bg4); color: var(--text); }
+.gen-btn.active { background: var(--bg4); color: var(--text); border-color: var(--text3); }
+
+.content { display: none; }
+.content.active { display: block; }
+.gen-content { display: none; padding: 24px 28px; }
+.gen-content.active { display: block; }
+
+.legend {
+  display: flex; flex-wrap: wrap; gap: 10px;
+  padding: 0 28px 16px;
+}
+.leg { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text2); }
+.leg-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+.diagram-wrap {
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.rack {
+  background: var(--bg3);
+  border: 2px solid var(--rack);
+  border-radius: 10px;
+  padding: 16px;
+  min-width: 900px;
+  position: relative;
+}
+.rack-label {
+  font-size: 11px; font-weight: 700; letter-spacing: .8px;
+  text-transform: uppercase; color: var(--rack);
+  margin-bottom: 10px;
+  display: flex; align-items: center; gap: 6px;
+}
+.rack-label::before {
+  content: ''; display: inline-block;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--rack);
+}
+.rack-specs {
+  font-size: 11px; color: var(--text3);
+  margin-bottom: 12px;
+}
+
+.nodes-row {
+  display: flex; gap: 10px; flex-wrap: wrap;
+}
+
+.node {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  flex: 1; min-width: 200px;
+}
+.node-label {
+  font-size: 11px; font-weight: 700;
+  color: var(--text2);
+  margin-bottom: 8px;
+  text-transform: uppercase; letter-spacing: .5px;
+}
+.node-specs {
+  font-size: 10px; color: var(--text3);
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.chips-row {
+  display: flex; gap: 6px; flex-wrap: wrap;
+}
+
+.chip {
+  border-radius: 6px;
+  padding: 8px 10px;
+  min-width: 90px;
+  flex: 1;
+}
+.chip.cpu  { background: #0d2137; border: 1px solid var(--cpu);  color: var(--cpu);  }
+.chip.gpu  { background: #0d2016; border: 1px solid var(--gpu);  color: var(--gpu);  }
+.chip.tpu  { background: #1a0d2e; border: 1px solid var(--tpu);  color: var(--tpu);  }
+.chip.npu  { background: #1e1030; border: 1px solid var(--npu);  color: var(--npu);  }
+.chip.hbm  { background: #2d1010; border: 1px solid var(--hbm);  color: var(--hbm);  }
+.chip.ddr  { background: #2d1a08; border: 1px solid var(--ddr);  color: var(--ddr);  }
+.chip.nic  { background: #0d2030; border: 1px solid var(--nic);  color: var(--nic);  }
+.chip.link { background: #0d2515; border: 1px solid var(--link); color: var(--link); }
+.chip.pwr  { background: #2d1a00; border: 1px solid var(--power); color: var(--power);}
+
+.board {
+  background: var(--bg3);
+  border: 1px solid var(--bg4);
+  border-radius: 6px;
+  padding: 10px;
+  margin-bottom: 6px;
+}
+.board-label {
+  font-size: 10px; font-weight: 600; color: var(--text3);
+  margin-bottom: 6px; text-transform: uppercase; letter-spacing: .5px;
+}
+
+.ilink {
+  display: flex; align-items: center;
+  gap: 6px; padding: 6px 0;
+  font-size: 10px; color: var(--link);
+}
+.ilink::before, .ilink::after {
+  content: ''; flex: 1; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--link), transparent);
+}
+
+.spec-table {
+  width: 100%; border-collapse: collapse;
+  margin-top: 16px; font-size: 11px;
+}
+.spec-table th {
+  background: var(--bg3); color: var(--text2);
+  padding: 6px 10px; text-align: left;
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+}
+.spec-table td {
+  padding: 5px 10px; border-bottom: 1px solid var(--bg3);
+  color: var(--text);
+}
+.spec-table tr:last-child td { border-bottom: none; }
+.spec-table td:first-child { color: var(--text2); }
+
+.gen-header {
+  display: flex; align-items: baseline; gap: 10px;
+  margin-bottom: 16px;
+}
+.gen-header h2 { font-size: 15px; font-weight: 700; }
+.gen-header .year {
+  font-size: 11px; color: var(--text2);
+  background: var(--bg3); padding: 2px 8px; border-radius: 10px;
+}
+.gen-header .process {
+  font-size: 11px; padding: 2px 8px; border-radius: 10px;
+  background: var(--bg3); color: var(--text2);
+}
+
+.chip-tile-row { display: flex; gap: 4px; flex-wrap: wrap; }
+.chip-tile {
+  border-radius: 4px; padding: 5px 8px;
+  font-size: 10px; line-height: 1.5;
+}
+.chip-tile.cpu  { background: #0d2137; border: 1px solid var(--cpu); color: var(--cpu); }
+.chip-tile.gpu  { background: #0d2016; border: 1px solid var(--gpu); color: var(--gpu); }
+.chip-tile.tpu  { background: #1a0d2e; border: 1px solid var(--tpu); color: var(--tpu); }
+.chip-tile.hbm  { background: #2d1010; border: 1px solid var(--hbm); color: var(--hbm); }
+.chip-tile.nic  { background: #0d2030; border: 1px solid var(--nic); color: var(--nic); }
+.chip-tile.link { background: #0d2515; border: 1px solid var(--link); color: var(--link);}
+.chip-tile.ddr  { background: #2d1a08; border: 1px solid var(--ddr); color: var(--ddr); }
+.chip-tile.pwr  { background: #2d1a00; border: 1px solid var(--power); color: var(--power);}
+.chip-tile.npu  { background: #1e1030; border: 1px solid var(--npu); color: var(--npu); }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>CSP Custom Silicon — Rack to Silicon Hierarchy</h1>
+    <p>AWS · GCP · Azure · Oracle — 랙 → 노드 → 칩 계층 구조 모식도</p>
+  </div>
+</header>
+
+<div class="csp-tabs">
+  <div class="csp-tab active" data-csp="aws">☁ AWS</div>
+  <div class="csp-tab" data-csp="gcp">☁ GCP</div>
+  <div class="csp-tab" data-csp="azure">☁ Azure</div>
+  <div class="csp-tab" data-csp="oracle">☁ Oracle</div>
+</div>
+
+<div class="content active" id="csp-aws">
+  <div class="gen-bar" id="gen-bar-aws">
+    <div class="gen-btn active" data-gen="aws-trn2">Trainium2 UltraServer</div>
+    <div class="gen-btn" data-gen="aws-trn1">Trainium1 (trn1)</div>
+    <div class="gen-btn" data-gen="aws-inf2">Inferentia2 (inf2)</div>
+    <div class="gen-btn" data-gen="aws-g4">Graviton4 (r8g)</div>
+    <div class="gen-btn" data-gen="aws-g3">Graviton3 (c7g)</div>
+  </div>
+  <div class="legend">
+    <div class="leg"><div class="leg-dot" style="background:var(--npu)"></div>NeuronCore</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--hbm)"></div>HBM</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--cpu)"></div>CPU</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--ddr)"></div>DDR5</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--link)"></div>NeuronLink/EFA</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--nic)"></div>Nitro NIC</div>
+  </div>
+  <div class="gen-content active" id="aws-trn2">
+    <div class="gen-header"><h2>Trainium2 UltraServer</h2><span class="year">2024 GA</span><span class="process">TSMC N3 · NeuronCore-v3</span></div>
+    <div class="diagram-wrap"><div class="rack">
+      <div class="rack-label">UltraServer Rack (4 × Trn2 Nodes)</div>
+      <div class="rack-specs">총 64 Trainium2 · 6 TB HBM · 185 TB/s BW · 12.8 Tbps EFA</div>
+      <div class="ilink">NeuronLink 노드간 2.4 TB/s</div>
+      <div class="nodes-row">
+        <div class="node" style="border-color:#3fb95055">
+          <div class="node-label">trn2.48xlarge Node (×4)</div>
+          <div class="node-specs">128 vCPU · 2 TB DDR5 · 400Gbps EFA</div>
+          <div class="board"><div class="board-label">Trainium2 Chip ×16</div>
+            <div class="chip-tile-row">
+              <div class="chip-tile npu">NeuronCore-v3 ×8<br>FP8: 1.3 PF/chip<br>INT8: 2.6 POPS</div>
+              <div class="chip-tile hbm">HBM3<br>96 GB/chip<br>2.9 TB/s</div>
+              <div class="chip-tile link">NeuronLink<br>칩간 고속</div>
+            </div>
+          </div>
+          <div class="board"><div class="board-label">Host CPU + Memory</div>
+            <div class="chip-tile-row">
+              <div class="chip-tile cpu">Intel Xeon<br>128 vCPU<br>PCIe 5.0</div>
+              <div class="chip-tile ddr">DDR5<br>2 TB</div>
+              <div class="chip-tile nic">Nitro Card<br>EFA 400G</div>
+            </div>
+          </div>
+        </div>
+        <div class="node" style="min-width:160px;max-width:210px;">
+          <div class="node-label">UltraServer 합산</div>
+          <table class="spec-table">
+            <tr><td>Trainium2 칩</td><td style="color:#d2a8ff">64개</td></tr>
+            <tr><td>NeuronCore-v3</td><td style="color:#d2a8ff">512개</td></tr>
+            <tr><td>HBM 총합</td><td style="color:#ff7b72">6 TB</td></tr>
+            <tr><td>메모리 BW</td><td style="color:#ff7b72">185 TB/s</td></tr>
+            <tr><td>FP8 연산</td><td style="color:#3fb950">83.2 PFLOPS</td></tr>
+            <tr><td>EFA 네트워크</td><td style="color:#79c0ff">12.8 Tbps</td></tr>
+            <tr><td>공정</td><td>TSMC N3</td></tr>
+          </table>
+        </div>
+      </div>
+    </div></div>
+  </div>
+  <div class="gen-content" id="aws-trn1">
+    <div class="gen-header"><h2>Trainium1 (trn1.32xlarge)</h2><span class="year">2022</span><span class="process">NeuronCore-v2</span></div>
+    <div class="diagram-wrap"><div class="rack">
+      <div class="rack-label">trn1 Rack</div>
+      <div class="rack-specs">16 Trainium1 · 512 GB HBM · 800 Gbps EFA</div>
+      <div class="ilink">NeuronLink 768 GB/s · EFA 800 Gbps</div>
+      <div class="nodes-row">
+        <div class="node">
+          <div class="node-label">trn1.32xlarge</div>
+          <div class="board"><div class="board-label">Trainium1 ×16</div>
+            <div class="chip-tile-row">
+              <div class="chip-tile npu">NeuronCore-v2 ×2<br>BF16: 210 TFLOPS</div>
+              <div class="chip-tile hbm">HBM 32 GB/chip<br>512 GB 총합</div>
+              <div class="chip-tile link">NeuronLink<br>768 GB/s</div>
+            </div>
+          </div>
+          <div class="board"><div class="board-label">Host</div>
+            <div class="chip-tile-row">
+              <div class="chip-tile cpu">Xeon 128 vCPU</div>
+              <div class="chip-tile ddr">DDR4 512 GB</div>
+              <div class="chip-tile nic">Nitro EFA</div>
+            </div>
+          </div>
+        </div>
+        <div class="node" style="min-width:160px;max-width:200px;">
+          <div class="node-label">스펙</div>
+          <table class="spec-table">
+            <tr><td>BF16</td><td style="color:#3fb950">210 TFLOPS</td></tr>
+            <tr><td>HBM/칩</td><td style="color:#ff7b72">32 GB</td></tr>
+            <tr><td>총 BF16</td><td style="color:#3fb950">3.4 PFLOPS</td></tr>
+          </table>
+        </div>
+      </div>
+    </div></div>
+  </div>
+  <div class="gen-content" id="aws-inf2">
+    <div class="gen-header"><h2>Inferentia2 (inf2.48xlarge)</h2><span class="year">2023</span><span class="process">NeuronCore-v2 · 추론 특화</span></div>
+    <div class="diagram-wrap"><div class="rack">
+      <div class="rack-label">inf2 Rack</div>
+      <div class="rack-specs">12 Inferentia2 · 384 GB HBM · 분산 추론</div>
+      <div class="nodes-row">
+        <div class="node">
+          <div class="node-label">inf2.48xlarge</div>
+          <div class="board"><div class="board-label">Inferentia2 ×12</div>
+            <div class="chip-tile-row">
+              <div class="chip-tile npu">NeuronCore-v2 ×2<br>FP16: 190 TFLOPS</div>
+              <div class="chip-tile hbm">HBM 32 GB<br>384 GB 총합</div>
+              <div class="chip-tile link">NeuronLink<br>분산 추론</div>
+            </div>
+          </div>
+        </div>
+        <div class="node" style="min-width:160px;max-width:200px;">
+          <div class="node-label">vs Inferentia1</div>
+          <table class="spec-table">
+            <tr><td>연산</td><td style="color:#3fb950">3×</td></tr>
+            <tr><td>처리량</td><td style="color:#3fb950">4×</td></tr>
+            <tr><td>지연시간</td><td style="color:#58a6ff">10× 감소</td></tr>
+          </table>
+        </div>
+      </div>
+    </div></div>
+  </div>
+  <div class="gen-content" id="aws-g4">
+    <div class="gen-header"><h2>Graviton4 (r8g.metal)</h2><span class="year">2023</span><span class="process">TSMC N4 · ARMv9 · Neoverse V2</span></div>
+    <div class="diagram-wrap"><div class="rack">
+      <div class="rack-label">r8g Rack</div>
+      <div class="nodes-row">
+        <div class="node">
+          <div class="node-label">r8g.metal-48xl · 192 vCPU · 1.5 TB DDR5</div>
+          <div class="board"><div class="board-label">Graviton4 SoC ×2 소켓</div>
+            <div class="chip-tile-row">
+              <div class="chip-tile cpu">Neoverse V2<br>96코어/소켓<br>ARMv9 4nm</div>
+              <div class="chip-tile cpu">SVE2 · BF16<br>2.8 GHz</div>
+              <div class="chip-tile ddr">DDR5-5600<br>12채널/소켓</div>
+              <div class="chip-tile nic">PCIe 5.0<br>Nitro ENA</div>
+            </div>
+          </div>
+        </div>
+        <div class="node" style="min-width:160px;max-width:200px;">
+          <div class="node-label">vs Graviton3</div>
+          <table class="spec-table">
+            <tr><td>ISA</td><td style="color:#58a6ff">ARMv9</td></tr>
+            <tr><td>코어/소켓</td><td style="color:#58a6ff">96</td></tr>
+            <tr><td>DB 성능</td><td style="color:#3fb950">+40%</td></tr>
+            <tr><td>Java</td><td style="color:#3fb950">+45%</td></tr>
+          </table>
+        </div>
+      </div>
+    </div></div>
+  </div>
+  <div class="gen-content" id="aws-g3">
+    <div class="gen-header"><h2>Graviton3 (c7g / hpc7g)</h2><span class="year">2022</span><span class="process">TSMC N5 · ARMv8.4+SVE · Neoverse V1</span></div>
+    <div class="diagram-wrap"><div class="rack">
+      <div class="rack-label">c7g Rack</div>
+      <div class="nodes-row">
+        <div class="node">
+          <div class="node-label">c7g.metal · 64 vCPU · 128 GB DDR5</div>
+          <div class="board"><div class="board-label">Graviton3 SoC</div>
+            <div class="chip-tile-row">
+              <div class="chip-tile cpu">Neoverse V1<br>64코어 5nm</div>
+              <div class="chip-tile cpu">BF16 네이티브<br>2.6 GHz</div>
+              <div class="chip-tile ddr">DDR5-4800<br>8채널</div>
+              <div class="chip-tile nic">PCIe 5.0<br>Nitro EFA</div>
+            </div>
+          </div>
+        </div>
+        <div class="node" style="min-width:160px;max-width:200px;">
+          <div class="node-label">vs Graviton2</div>
+          <table class="spec-table">
+            <tr><td>FP 성능</td><td style="color:#3fb950">2×</td></tr>
+            <tr><td>ML (BF16)</td><td style="color:#3fb950">3×</td></tr>
+            <tr><td>메모리 BW</td><td style="color:#3fb950">+50%</td></tr>
+          </table>
+        </div>
+      </div>
+    </div></div>
+  </div>
+</div>
+
+<div class="content" id="csp-gcp">
+  <div class="gen-bar" id="gen-bar-gcp">
+    <div class="gen-btn active" data-gen="gcp-v6e">TPU v6e Trillium</div>
+    <div class="gen-btn" data-gen="gcp-v5p">TPU v5p</div>
+    <div class="gen-btn" data-gen="gcp-v5e">TPU v5e</div>
+    <div class="gen-btn" data-gen="gcp-v4">TPU v4</div>
+    <div class="gen-btn" data-gen="gcp-axion">Axion C4A</div>
+  </div>
+  <div class="legend">
+    <div class="leg"><div class="leg-dot" style="background:var(--tpu)"></div>TPU MXU</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--hbm)"></div>HBM</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--cpu)"></div>Axion CPU</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--link)"></div>ICI/OCS</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--nic)"></div>Titanium NIC</div>
+  </div>
+  <div class="gen-content active" id="gcp-v6e">
+    <div class="gen-header"><h2>TPU v6e Trillium Pod (256칩)</h2><span class="year">2024 GA</span><span class="process">918 TFLOPS BF16 · 32 GB HBM</span></div>
+    <div class="diagram-wrap"><div class="rack">
+      <div class="rack-label">TPU v6e Pod — 256칩 수랭</div>
+      <div class="rack-specs">235 PFLOPS BF16 총합 · 8,192 GB HBM</div>
+      <div class="ilink">ICI (Inter-Chip Interconnect) · 3D Torus · v5p 대비 2× BW</div>
+      <div class="nodes-row">
+        <div class="node">
+          <div class="node-label">TPU v6e Board (4칩 × 64보드)</div>
+          <div class="board"><div class="board-label">TPU v6e 칩 ×4</div>
+            <div class="chip-tile-row">
+              <div class="chip-tile tpu">TensorCore<br>MXU 256×256<br>BF16: 918 TFLOPS</div>
+              <div class="chip-tile hbm">HBM 32 GB<br>1,600 GB/s</div>
+              <div class="chip-tile link">ICI 2× v5p</div>
+            </div>
+          </div>
+          <div class="board"><div class="board-label">인프라 칩</div>
+            <div class="chip-tile-row">
+              <div class="chip-tile nic">Titan 보안MCU</div>
+              <div class="chip-tile nic">Titanium SmartNIC</div>
+              <div class="chip-tile link">Jupiter OCS 400G</div>
+            </div>
+          </div>
+        </div>
+        <div class="node" style="min-width:160px;max-width:200px;">
+          <div class="node-label">v5e 대비</div>
+          <table class="spec-table">
+            <tr><td>BF16</td><td style="color:#bc8cff">4.7×</td></tr>
+            <tr><td>HBM</td><td style="color:#ff7b72">32 GB (2×)</td></tr>
+            <tr><td>에너지효율</td><td style="color:#3fb950">+67%</td></tr>
+          </table>
+        </div>
+      </div>
+    </div></div>
+  </div>
+  <div class="gen-content" id="gcp-v5p">
+    <div class="gen-header"><h2>TPU v5p Pod (최대 8,960칩)</h2><span class="year">2023 GA</span><span class="process">459 TFLOPS BF16 · 95 GB HBM</span></div>
+    <div class="diagram-wrap"><div class="rack">
+      <div class="rack-label">TPU v5p Pod — 8,960칩</div>
+      <div class="rack-specs">ICI 4,800 Gbps/칩 · Gemini Ultra 훈련</div>
+      <div class="nodes-row">
+        <div class="node">
+          <div class="board"><div class="board-label">TPU v5p 칩</div>
+            <div class="chip-tile-row">
+              <div class="chip-tile tpu">TensorCore ×2<br>MXU ×8<br>459 TFLOPS</div>
+              <div class="chip-tile hbm">HBM 95 GB<br>2,765 GB/s</div>
+              <div class="chip-tile link">ICI 4,800 Gbps<br>3D Torus</div>
+            </div>
+          </div>
+        </div>
+        <div class="node" style="min-width:160px;max-width:200px;">
+          <div class="node-label">스펙</div>
+          <table class="spec-table">
+            <tr><td>BF16</td><td style="color:#bc8cff">459 TFLOPS</td></tr>
+            <tr><td>HBM</td><td style="color:#ff7b72">95 GB (3× v4)</td></tr>
+            <tr><td>Max Pod</td><td>8,960칩</td></tr>
+          </table>
+        </div>
+      </div>
+    </div></div>
+  </div>
+  <div class="gen-content" id="gcp-v5e">
+    <div class="gen-header"><h2>TPU v5e Pod (256칩)</h2><span class="year">2023 GA</span><span class="process">197 TFLOPS · 16 GB HBM · 비용 최적화</span></div>
+    <div class="diagram-wrap"><div class="rack">
+      <div class="rack-label">TPU v5e Pod</div>
+      <div class="nodes-row">
+        <div class="node">
+          <div class="board"><div class="board-label">TPU v5e 칩</div>
+            <div class="chip-tile-row">
+              <div class="chip-tile tpu">MXU ×4<br>BF16: 197 TFLOPS<br>INT8: 393 TOPS</div>
+              <div class="chip-tile hbm">HBM 16 GB<br>819 GB/s</div>
+              <div class="chip-tile link">ICI 3D Torus</div>
+            </div>
+          </div>
+        </div>
+        <div class="node" style="min-width:160px;max-width:200px;">
+          <div class="node-label">포지셔닝</div>
+          <table class="spec-table">
+            <tr><td>가격/성능</td><td style="color:#3fb950">v4 대비 2.3×</td></tr>
+            <tr><td>대상</td><td>&lt;200B 파라미터</td></tr>
+          </table>
+        </div>
+      </div>
+    </div></div>
+  </div>
+  <div class="gen-content" id="gcp-v4">
+    <div class="gen-header"><h2>TPU v4 Pod (4,096칩)</h2><span class="year">2021/2022 GA</span><span class="process">275 TFLOPS BF16 · 재구성 3D Mesh</span></div>
+    <div class="diagram-wrap"><div class="rack">
+      <div class="rack-label">TPU v4 Pod · PaLM/Gemini 훈련</div>
+      <div class="nodes-row">
+        <div class="node">
+          <div class="board"><div class="chip-tile-row">
+            <div class="chip-tile tpu">TensorCore ×2<br>MXU ×8<br>275 TFLOPS</div>
+            <div class="chip-tile hbm">HBM</div>
+            <div class="chip-tile link">ICI 3D Mesh<br>재구성 가능</div>
+          </div></div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+  <div class="gen-content" id="gcp-axion">
+    <div class="gen-header"><h2>Google Axion — C4A</h2><span class="year">2024 GA</span><span class="process">ARM Neoverse V2 · 72코어</span></div>
+    <div class="diagram-wrap"><div class="rack">
+      <div class="rack-label">C4A Rack — Axion + Titanium</div>
+      <div class="nodes-row">
+        <div class="node">
+          <div class="board"><div class="board-label">Axion SoC ×2 소켓</div>
+            <div class="chip-tile-row">
+              <div class="chip-tile cpu">Neoverse V2<br>72코어/소켓<br>ARMv9 80MB L3</div>
+              <div class="chip-tile ddr">DDR5 576 GB/소켓</div>
+              <div class="chip-tile nic">Titanium NIC<br>50~100 Gbps</div>
+              <div class="chip-tile nic">Titanium SSD<br>6 TiB NVMe</div>
+            </div>
+          </div>
+        </div>
+        <div class="node" style="min-width:160px;max-width:200px;">
+          <div class="node-label">vs x86</div>
+          <table class="spec-table">
+            <tr><td>가격/성능</td><td style="color:#3fb950">+65%</td></tr>
+            <tr><td>에너지 효율</td><td style="color:#3fb950">+60%</td></tr>
+          </table>
+        </div>
+      </div>
+    </div></div>
+  </div>
+</div>
+
+<div class="content" id="csp-azure">
+  <div class="gen-bar" id="gen-bar-azure">
+    <div class="gen-btn active" data-gen="az-maia200">Maia 200</div>
+    <div class="gen-btn" data-gen="az-maia100">Maia 100</div>
+    <div class="gen-btn" data-gen="az-cobalt100">Cobalt 100</div>
+    <div class="gen-btn" data-gen="az-cobalt200">Cobalt 200</div>
+    <div class="gen-btn" data-gen="az-boost">Azure Boost DPU</div>
+  </div>
+  <div class="legend">
+    <div class="leg"><div class="leg-dot" style="background:var(--npu)"></div>Maia AI ASIC</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--hbm)"></div>HBM</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--cpu)"></div>Cobalt CPU</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--nic)"></div>Azure Boost</div>
+  </div>
+  <div class="gen-content active" id="az-maia200">
+    <div class="gen-header"><h2>Maia 200 — 추론 특화 AI ASIC</h2><span class="year">2026-01 발표</span><span class="process">TSMC 3nm · HBM3e · FP8/FP4</span></div>
+    <div class="diagram-wrap"><div class="rack">
+      <div class="rack-label">Maia 200 추론 서버 Rack</div>
+      <div class="nodes-row">
+        <div class="node">
+          <div class="board"><div class="board-label">Maia 200 AI ASIC</div>
+            <div class="chip-tile-row">
+              <div class="chip-tile npu">Maia 200<br>TSMC 3nm<br>FP8/FP4 네이티브</div>
+              <div class="chip-tile hbm">HBM3e 216 GB</div>
+              <div class="chip-tile pwr">750W TDP</div>
+            </div>
+          </div>
+          <div class="board"><div class="board-label">호스트 + 인프라</div>
+            <div class="chip-tile-row">
+              <div class="chip-tile cpu">Cobalt 100<br>128코어</div>
+              <div class="chip-tile ddr">DDR5</div>
+              <div class="chip-tile nic">Azure Boost<br>400 Gbps</div>
+            </div>
+          </div>
+        </div>
+        <div class="node" style="min-width:160px;max-width:200px;">
+          <div class="node-label">vs Maia 100</div>
+          <table class="spec-table">
+            <tr><td>공정</td><td style="color:#d2a8ff">3nm</td></tr>
+            <tr><td>HBM</td><td style="color:#ff7b72">216 GB (3.4×)</td></tr>
+            <tr><td>타입</td><td>HBM3e</td></tr>
+            <tr><td>포커스</td><td>추론 최적화</td></tr>
+          </table>
+        </div>
+      </div>
+    </div></div>
+  </div>
+  <div class="gen-content" id="az-maia100">
+    <div class="gen-header"><h2>Maia 100 — 내부 AI ASIC</h2><span class="year">2023-11</span><span class="process">TSMC N5 · 820mm² · CoWoS-S</span></div>
+    <div class="diagram-wrap"><div class="rack">
+      <div class="rack-label">Maia 100 내부 클러스터 (고객 미제공)</div>
+      <div class="nodes-row">
+        <div class="node">
+          <div class="board"><div class="board-label">Maia 100 ASIC</div>
+            <div class="chip-tile-row">
+              <div class="chip-tile npu">TSMC 5nm 820mm²<br>INT6: 3 POPS<br>BF16: 0.8 PFLOPS</div>
+              <div class="chip-tile hbm">HBM2E ×4<br>64 GB · 1.8 Tbps</div>
+              <div class="chip-tile link">커스텀 이더넷<br>4.8 Tbps</div>
+              <div class="chip-tile pwr">500~700W TDP</div>
+            </div>
+          </div>
+        </div>
+        <div class="node" style="min-width:160px;max-width:200px;">
+          <div class="node-label">스펙</div>
+          <table class="spec-table">
+            <tr><td>패키징</td><td>CoWoS-S</td></tr>
+            <tr><td>HBM2E</td><td style="color:#ff7b72">64 GB</td></tr>
+            <tr><td>INT6</td><td style="color:#d2a8ff">3.0 POPS</td></tr>
+          </table>
+        </div>
+      </div>
+    </div></div>
+  </div>
+  <div class="gen-content" id="az-cobalt100">
+    <div class="gen-header"><h2>Cobalt 100 — Dpsv6/Epsv6</h2><span class="year">2024-10 GA</span><span class="process">TSMC 5nm · ARM Neoverse N2 · 128코어</span></div>
+    <div class="diagram-wrap"><div class="rack">
+      <div class="rack-label">Cobalt 100 Rack — 29개+ 리전</div>
+      <div class="nodes-row">
+        <div class="node">
+          <div class="board"><div class="board-label">Cobalt 100 SoC</div>
+            <div class="chip-tile-row">
+              <div class="chip-tile cpu">ARM Neoverse N2<br>128코어 3.4 GHz<br>TSMC 5nm</div>
+              <div class="chip-tile ddr">DDR5 최대 672 GiB</div>
+            </div>
+          </div>
+          <div class="board"><div class="board-label">Azure Boost DPU Gen1</div>
+            <div class="chip-tile-row">
+              <div class="chip-tile nic">ARM+FPGA SoC<br>200 Gbps · 750K IOPS</div>
+              <div class="chip-tile link">AccelNet SDN &lt;15µs</div>
+            </div>
+          </div>
+        </div>
+        <div class="node" style="min-width:160px;max-width:200px;">
+          <div class="node-label">vs x86</div>
+          <table class="spec-table">
+            <tr><td>가격/성능</td><td style="color:#3fb950">+50%</td></tr>
+            <tr><td>코어</td><td style="color:#58a6ff">128</td></tr>
+          </table>
+        </div>
+      </div>
+    </div></div>
+  </div>
+  <div class="gen-content" id="az-cobalt200">
+    <div class="gen-header"><h2>Cobalt 200 (차세대)</h2><span class="year">2025-11 발표 · 2026 GA</span><span class="process">TSMC 3nm · Neoverse V3 · 2-Chiplet · 132코어</span></div>
+    <div class="diagram-wrap"><div class="rack">
+      <div class="rack-label">Cobalt 200 Rack + Azure Boost Overlake</div>
+      <div class="nodes-row">
+        <div class="node">
+          <div class="board"><div class="board-label">Cobalt 200 SoC (2-Chiplet)</div>
+            <div class="chip-tile-row">
+              <div class="chip-tile cpu">Chiplet ×2<br>66코어/chiplet<br>Neoverse V3 3nm</div>
+              <div class="chip-tile ddr">DDR5 12채널<br>192MB L3</div>
+              <div class="chip-tile nic">Boost Overlake<br>400 Gbps</div>
+            </div>
+          </div>
+        </div>
+        <div class="node" style="min-width:160px;max-width:200px;">
+          <div class="node-label">vs Cobalt 100</div>
+          <table class="spec-table">
+            <tr><td>공정</td><td style="color:#d2a8ff">3nm</td></tr>
+            <tr><td>성능</td><td style="color:#3fb950">+50%</td></tr>
+          </table>
+        </div>
+      </div>
+    </div></div>
+  </div>
+  <div class="gen-content" id="az-boost">
+    <div class="gen-header"><h2>Azure Boost DPU — Gen1/Gen2</h2><span class="year">Gen1:2023 · Gen2:2025</span><span class="process">ARM+FPGA SoC · Fungible 기반</span></div>
+    <div class="diagram-wrap"><div class="rack">
+      <div class="rack-label">Azure Boost DPU (모든 v6 VM)</div>
+      <div class="nodes-row">
+        <div class="node">
+          <div class="board"><div class="board-label">Azure Boost SoC</div>
+            <div class="chip-tile-row">
+              <div class="chip-tile nic">ARM 코어<br>Azure Linux</div>
+              <div class="chip-tile link">FPGA AccelNet SDN</div>
+              <div class="chip-tile nic">NVMe 암호화 엔진</div>
+            </div>
+          </div>
+        </div>
+        <div class="node">
+          <table class="spec-table">
+            <tr style="background:var(--bg3)"><th>항목</th><th>Gen1</th><th>Gen2</th></tr>
+            <tr><td>NW</td><td>200G</td><td style="color:#3fb950">400G</td></tr>
+            <tr><td>스토리지</td><td>14 GB/s</td><td style="color:#3fb950">20 GB/s</td></tr>
+            <tr><td>IOPS</td><td>750K</td><td style="color:#3fb950">1,000K</td></tr>
+          </table>
+        </div>
+      </div>
+    </div></div>
+  </div>
+</div>
+
+<div class="content" id="csp-oracle">
+  <div class="gen-bar" id="gen-bar-oracle">
+    <div class="gen-btn active" data-gen="oci-mi355x">AMD MI355X</div>
+    <div class="gen-btn" data-gen="oci-h200">NVIDIA H200</div>
+    <div class="gen-btn" data-gen="oci-a4">Ampere A4 + Acceleron</div>
+    <div class="gen-btn" data-gen="oci-a2">Ampere A2</div>
+    <div class="gen-btn" data-gen="oci-acceleron">Acceleron CNIC</div>
+  </div>
+  <div class="legend">
+    <div class="leg"><div class="leg-dot" style="background:var(--gpu)"></div>AMD GPU</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--tpu)"></div>NVIDIA GPU</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--hbm)"></div>HBM</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--cpu)"></div>Ampere CPU</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--nic)"></div>Acceleron CNIC</div>
+  </div>
+  <div class="gen-content active" id="oci-mi355x">
+    <div class="gen-header"><h2>AMD MI355X — BM.GPU.MI355X.8</h2><span class="year">2025-10 GA</span><span class="process">288 GB HBM3E · 8 TB/s · XGMI</span></div>
+    <div class="diagram-wrap"><div class="rack">
+      <div class="rack-label">BM.GPU.MI355X.8 베어메탈 Rack</div>
+      <div class="rack-specs">RDMA RoCEv2 · Oracle Acceleron CNIC</div>
+      <div class="ilink">XGMI (GPU간) · RoCEv2 RDMA (노드간)</div>
+      <div class="nodes-row">
+        <div class="node">
+          <div class="board"><div class="board-label">AMD Instinct MI355X ×8</div>
+            <div class="chip-tile-row">
+              <div class="chip-tile gpu">MI355X CDNA3<br>FP8/FP16/BF16</div>
+              <div class="chip-tile hbm">HBM3E 288 GB/GPU<br>2,304 GB 총합<br>8 TB/s BW</div>
+              <div class="chip-tile link">XGMI 연결</div>
+            </div>
+          </div>
+          <div class="board"><div class="board-label">호스트 + 네트워크</div>
+            <div class="chip-tile-row">
+              <div class="chip-tile cpu">AMD EPYC PCIe 5.0</div>
+              <div class="chip-tile nic">Acceleron CNIC<br>RDMA 오프로드</div>
+              <div class="chip-tile link">RoCEv2 단일µs</div>
+            </div>
+          </div>
+        </div>
+        <div class="node" style="min-width:160px;max-width:200px;">
+          <div class="node-label">vs MI300X</div>
+          <table class="spec-table">
+            <tr><td>HBM/GPU</td><td style="color:#ff7b72">288 GB (+50%)</td></tr>
+            <tr><td>BW/GPU</td><td style="color:#ff7b72">8 TB/s</td></tr>
+            <tr><td>총 HBM</td><td style="color:#ff7b72">2,304 GB</td></tr>
+            <tr><td>가격</td><td>$6/GPU-hr</td></tr>
+          </table>
+        </div>
+      </div>
+    </div></div>
+  </div>
+  <div class="gen-content" id="oci-h200">
+    <div class="gen-header"><h2>NVIDIA H200 — BM.GPU.H200.8</h2><span class="year">2024~2025</span><span class="process">141 GB HBM3e · NVLink 5세대</span></div>
+    <div class="diagram-wrap"><div class="rack">
+      <div class="rack-label">BM.GPU.H200.8 베어메탈 Rack</div>
+      <div class="rack-specs">8 × H200 · 1,128 GB HBM3e</div>
+      <div class="ilink">NVLink 5G + NVSwitch (GPU간) · RDMA RoCEv2 (노드간)</div>
+      <div class="nodes-row">
+        <div class="node">
+          <div class="board"><div class="board-label">NVIDIA H200 SXM ×8</div>
+            <div class="chip-tile-row">
+              <div class="chip-tile tpu">H200 Hopper<br>BF16/FP8</div>
+              <div class="chip-tile hbm">HBM3e 141 GB/GPU<br>4.8 TB/s BW</div>
+              <div class="chip-tile link">NVLink 5G<br>GPU간 900 GB/s</div>
+            </div>
+          </div>
+          <div class="board"><div class="board-label">호스트 + 네트워크</div>
+            <div class="chip-tile-row">
+              <div class="chip-tile cpu">호스트 CPU PCIe 5.0</div>
+              <div class="chip-tile nic">Acceleron CNIC RDMA</div>
+            </div>
+          </div>
+        </div>
+        <div class="node" style="min-width:160px;max-width:200px;">
+          <div class="node-label">스펙</div>
+          <table class="spec-table">
+            <tr><td>HBM3e/GPU</td><td style="color:#ff7b72">141 GB</td></tr>
+            <tr><td>BW/GPU</td><td style="color:#ff7b72">4.8 TB/s</td></tr>
+            <tr><td>총 HBM</td><td style="color:#ff7b72">1,128 GB</td></tr>
+          </table>
+        </div>
+      </div>
+    </div></div>
+  </div>
+  <div class="gen-content" id="oci-a4">
+    <div class="gen-header"><h2>Ampere A4 + Oracle Acceleron</h2><span class="year">2025 GA</span><span class="process">ARM v9 · 96코어 · 3.6 GHz · Polaris</span></div>
+    <div class="diagram-wrap"><div class="rack">
+      <div class="rack-label">BM.Standard.A4.96 + Acceleron CNIC</div>
+      <div class="nodes-row">
+        <div class="node">
+          <div class="board"><div class="board-label">AmpereOne M (Polaris)</div>
+            <div class="chip-tile-row">
+              <div class="chip-tile cpu">96코어 ARMv9<br>3.6 GHz</div>
+              <div class="chip-tile ddr">DDR5 12채널<br>946 GB</div>
+            </div>
+          </div>
+          <div class="board"><div class="board-label">Oracle Acceleron CNIC</div>
+            <div class="chip-tile-row">
+              <div class="chip-tile nic">Host NIC + CCC<br>단일 칩 통합</div>
+              <div class="chip-tile link">Zero-Trust Routing<br>2× NW 처리량</div>
+            </div>
+          </div>
+        </div>
+        <div class="node" style="min-width:160px;max-width:200px;">
+          <div class="node-label">vs A2</div>
+          <table class="spec-table">
+            <tr><td>ISA</td><td style="color:#58a6ff">ARMv9</td></tr>
+            <tr><td>클럭</td><td style="color:#3fb950">+20%</td></tr>
+            <tr><td>메모리 BW</td><td style="color:#3fb950">2×</td></tr>
+          </table>
+        </div>
+      </div>
+    </div></div>
+  </div>
+  <div class="gen-content" id="oci-a2">
+    <div class="gen-header"><h2>Ampere A2 — BM.Standard.A2.160</h2><span class="year">2023</span><span class="process">ARM v8.6 · 160코어 · 커스텀</span></div>
+    <div class="diagram-wrap"><div class="rack">
+      <div class="rack-label">BM.Standard.A2.160 Rack</div>
+      <div class="nodes-row">
+        <div class="node">
+          <div class="board"><div class="board-label">AmpereOne A160-30</div>
+            <div class="chip-tile-row">
+              <div class="chip-tile cpu">160코어 ARMv8.6<br>3.0 GHz 커스텀</div>
+              <div class="chip-tile ddr">DDR4/5 960 GB<br>2MB L2/코어</div>
+            </div>
+          </div>
+        </div>
+        <div class="node" style="min-width:160px;max-width:200px;">
+          <div class="node-label">vs A1</div>
+          <table class="spec-table">
+            <tr><td>MySQL</td><td style="color:#3fb950">+59%</td></tr>
+            <tr><td>Postgres</td><td style="color:#3fb950">+27%</td></tr>
+          </table>
+        </div>
+      </div>
+    </div></div>
+  </div>
+  <div class="gen-content" id="oci-acceleron">
+    <div class="gen-header"><h2>Oracle Acceleron CNIC — OCI 유일 자체 실리콘</h2><span class="year">2025-10</span><span class="process">Host NIC + CCC 단일 통합 칩</span></div>
+    <div class="diagram-wrap"><div class="rack">
+      <div class="rack-label">Oracle Acceleron 통합 Rack</div>
+      <div class="nodes-row">
+        <div class="node">
+          <div class="board"><div class="board-label">단일 칩 구조</div>
+            <div class="chip-tile-row">
+              <div class="chip-tile nic">Host NIC<br>고객 데이터 플레인</div>
+              <div class="chip-tile nic">CCC<br>Oracle 관리 플레인</div>
+              <div class="chip-tile link">하드웨어 정적 파티셔닝</div>
+            </div>
+          </div>
+          <div class="board"><div class="board-label">오프로드 기능</div>
+            <div class="chip-tile-row">
+              <div class="chip-tile nic">NVMe/TCP</div>
+              <div class="chip-tile nic">라인레이트 암호화</div>
+              <div class="chip-tile link">Zero-Trust Routing</div>
+              <div class="chip-tile nic">무중단 NIC 패치</div>
+            </div>
+          </div>
+        </div>
+        <div class="node">
+          <table class="spec-table">
+            <tr><td>E6 Standard Acceleron</td><td style="color:#79c0ff">Intel/AMD CPU</td></tr>
+            <tr><td>X12 Standard Acceleron</td><td style="color:#79c0ff">Intel Xeon 6</td></tr>
+            <tr><td>A4 Standard Acceleron</td><td style="color:#79c0ff">AmpereOne M</td></tr>
+            <tr><td>NW 처리량</td><td style="color:#3fb950">최대 2×</td></tr>
+          </table>
+        </div>
+      </div>
+    </div></div>
+  </div>
+</div>
+
+<script>
+document.querySelectorAll('.csp-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    const csp = tab.dataset.csp;
+    document.querySelectorAll('.csp-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('csp-' + csp).classList.add('active');
+  });
+});
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.gen-btn');
+  if (!btn) return;
+  const genId = btn.dataset.gen;
+  const bar = btn.closest('.gen-bar');
+  bar.querySelectorAll('.gen-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const contentDiv = bar.closest('.content');
+  contentDiv.querySelectorAll('.gen-content').forEach(c => c.classList.remove('active'));
+  const target = document.getElementById(genId);
+  if (target) target.classList.add('active');
+});
+</script>
+</body>
+</html>
