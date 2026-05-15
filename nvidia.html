@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NVIDIA Vera Rubin Architecture — NVL144 / NVL72</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #f5f5f5;
+    color: #111;
+  }
+
+  /* ── Header ─────────────────────────────────────────── */
+  .page-header {
+    background: #1a1a1a;
+    color: #fff;
+    padding: 16px 32px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    border-bottom: 3px solid #76b900;
+  }
+  .nvidia-logo {
+    font-size: 22px;
+    font-weight: 900;
+    color: #76b900;
+    letter-spacing: 2px;
+  }
+  .page-header h1 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #fff;
+  }
+  .page-header .subtitle {
+    font-size: 13px;
+    color: #aaa;
+    margin-top: 2px;
+  }
+
+  /* ── System Tabs ─────────────────────────────────────── */
+  .sys-tabs {
+    background: #fff;
+    display: flex;
+    gap: 0;
+    border-bottom: 2px solid #ddd;
+    padding: 0 32px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.08);
+  }
+  .sys-tab {
+    padding: 12px 28px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    color: #666;
+    transition: all .2s;
+    user-select: none;
+    margin-bottom: -2px;
+  }
+  .sys-tab:hover { color: #333; background: #f5f5f5; }
+  .sys-tab.active { color: #76b900; border-bottom-color: #76b900; background: #fff; }
+
+  /* ── 3-Column Content ─────────────────────────────────── */
+  .content-area {
+    display: none;
+    padding: 24px 20px;
+    gap: 20px;
+    min-height: calc(100vh - 160px);
+  }
+  .content-area.active {
+    display: grid;
+    grid-template-columns: 220px 1fr 1fr;
+    grid-template-rows: auto auto;
+  }
+
+  /* column headers */
+  .col-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: #888;
+    margin-bottom: 8px;
+    padding-left: 4px;
+  }
+
+  .col-wrap { display: flex; flex-direction: column; }
+
+  .panel {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.06);
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ── Stats bar ───────────────────────────────────────── */
+  .stats-bar {
+    grid-column: 1 / -1;
+    background: #1a1a1a;
+    border-radius: 10px;
+    padding: 18px 28px;
+    display: flex;
+    gap: 0;
+    flex-wrap: wrap;
+    margin-top: 4px;
+    box-shadow: 0 2px 12px rgba(0,0,0,.15);
+  }
+  .stat-item {
+    flex: 1;
+    min-width: 120px;
+    text-align: center;
+    padding: 8px 10px;
+    border-right: 1px solid #333;
+  }
+  .stat-item:last-child { border-right: none; }
+  .stat-val {
+    font-size: 22px;
+    font-weight: 800;
+    color: #76b900;
+    line-height: 1.1;
+  }
+  .stat-unit { font-size: 12px; color: #aaa; }
+  .stat-label { font-size: 11px; color: #888; margin-top: 3px; }
+
+  /* ── Panel titles ────────────────────────────────────── */
+  .panel-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid #76b900;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .panel-title .badge {
+    font-size: 10px;
+    background: #76b900;
+    color: #fff;
+    border-radius: 4px;
+    padding: 1px 7px;
+    font-weight: 700;
+  }
+
+  /* chip grid in right column */
+  .chip-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+  svg text { font-family: 'Segoe UI', Arial, sans-serif; }
+
+  /* tooltip */
+  .tooltip {
+    position: fixed;
+    background: rgba(20,20,20,.92);
+    color: #fff;
+    font-size: 12px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    pointer-events: none;
+    display: none;
+    z-index: 9999;
+    border: 1px solid #76b900;
+    max-width: 220px;
+    line-height: 1.5;
+  }
+
+  .chip-caption {
+    text-align: center;
+    font-size: 11px;
+    color: #666;
+    margin-top: 5px;
+    font-weight: 600;
+  }
+
+  /* legend */
+  .legend { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .leg-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #555; }
+  .leg-dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+
+  @media (max-width: 900px) {
+    .content-area.active { grid-template-columns: 1fr; }
+    .stats-bar { grid-column: 1; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <div class="nvidia-logo">NVIDIA</div>
+  <div>
+    <div class="h1" style="font-size:20px;font-weight:700;color:#fff;">Vera Rubin Architecture</div>
+    <div class="subtitle">Next-Generation AI Infrastructure • 2025–2026</div>
+  </div>
+</div>
+
+<!-- System tabs -->
+<div class="sys-tabs">
+  <div class="sys-tab active" onclick="switchTab('nvl144')">NVL144</div>
+  <div class="sys-tab" onclick="switchTab('nvl72')">NVL72</div>
+  <div class="sys-tab" onclick="switchTab('gb300')">GB300 NVL72</div>
+</div>
+
+<!-- ═══════════════════════ NVL144 ═══════════════════════ -->
+<div id="tab-nvl144" class="content-area active">
+
+  <!-- LEFT: Rack -->
+  <div class="col-wrap">
+    <div class="col-label">Rack System</div>
+    <div class="panel">
+      <div class="panel-title">
+        Oberon Rack — NVL144
+        <span class="badge">36U</span>
+      </div>
+      <!-- Rack SVG -->
+      <svg viewBox="0 0 180 400" width="100%" style="max-height:420px;" id="rack-nvl144">
+        <!-- rack frame -->
+        <rect x="10" y="5" width="160" height="390" rx="5" fill="#1c1c1c" stroke="#444" stroke-width="2"/>
+        <!-- rack rails -->
+        <rect x="10" y="5" width="14" height="390" rx="2" fill="#2a2a2a"/>
+        <rect x="156" y="5" width="14" height="390" rx="2" fill="#2a2a2a"/>
+
+        <!-- top switch / mgmt 2U -->
+        <rect x="24" y="12" width="132" height="18" rx="2" fill="#404855" stroke="#5a6070" stroke-width="1"/>
+        <text x="90" y="24" text-anchor="middle" fill="#aab" font-size="7">InfiniBand / Mgmt Switch</text>
+
+        <!-- 8 compute trays × 4U each — tray 1 highlighted -->
+        <!-- tray 1 (highlighted) -->
+        <rect x="24" y="33" width="132" height="36" rx="2" fill="#8a6820" stroke="#76b900" stroke-width="2.5"/>
+        <text x="90" y="46" text-anchor="middle" fill="#ffe" font-size="8" font-weight="700">Compute Tray 1</text>
+        <text x="90" y="57" text-anchor="middle" fill="#ffd" font-size="6.5">4× Vera Rubin Superchip</text>
+        <text x="90" y="65" text-anchor="middle" fill="#cca" font-size="5.5">8× Rubin GPU · 4× Vera CPU</text>
+
+        <!-- tray 2-8 -->
+        <rect x="24" y="72" width="132" height="36" rx="2" fill="#6a5010" stroke="#554010" stroke-width="1"/>
+        <text x="90" y="93" text-anchor="middle" fill="#cca" font-size="7.5">Compute Tray 2</text>
+
+        <rect x="24" y="111" width="132" height="36" rx="2" fill="#6a5010" stroke="#554010" stroke-width="1"/>
+        <text x="90" y="132" text-anchor="middle" fill="#cca" font-size="7.5">Compute Tray 3</text>
+
+        <rect x="24" y="150" width="132" height="36" rx="2" fill="#6a5010" stroke="#554010" stroke-width="1"/>
+        <text x="90" y="171" text-anchor="middle" fill="#cca" font-size="7.5">Compute Tray 4</text>
+
+        <rect x="24" y="189" width="132" height="36" rx="2" fill="#6a5010" stroke="#554010" stroke-width="1"/>
+        <text x="90" y="210" text-anchor="middle" fill="#cca" font-size="7.5">Compute Tray 5</text>
+
+        <rect x="24" y="228" width="132" height="36" rx="2" fill="#6a5010" stroke="#554010" stroke-width="1"/>
+        <text x="90" y="249" text-anchor="middle" fill="#cca" font-size="7.5">Compute Tray 6</text>
+
+        <rect x="24" y="267" width="132" height="36" rx="2" fill="#6a5010" stroke="#554010" stroke-width="1"/>
+        <text x="90" y="288" text-anchor="middle" fill="#cca" font-size="7.5">Compute Tray 7</text>
+
+        <rect x="24" y="306" width="132" height="36" rx="2" fill="#6a5010" stroke="#554010" stroke-width="1"/>
+        <text x="90" y="327" text-anchor="middle" fill="#cca" font-size="7.5">Compute Tray 8</text>
+
+        <!-- NVLink switch trays 2U × 2 -->
+        <rect x="24" y="345" width="132" height="16" rx="2" fill="#2c3545" stroke="#3c4a60" stroke-width="1"/>
+        <text x="90" y="356" text-anchor="middle" fill="#8ad" font-size="6.5">NVLink 6 Switch Tray</text>
+        <rect x="24" y="364" width="132" height="16" rx="2" fill="#2c3545" stroke="#3c4a60" stroke-width="1"/>
+        <text x="90" y="375" text-anchor="middle" fill="#8ad" font-size="6.5">NVLink 6 Switch Tray</text>
+
+        <!-- PSU row -->
+        <rect x="24" y="383" width="132" height="10" rx="2" fill="#222" stroke="#333" stroke-width="1"/>
+        <text x="90" y="391" text-anchor="middle" fill="#666" font-size="5.5">Power Supply Units (PSU)</text>
+
+        <!-- dashed zoom connector from tray 1 -->
+        <line x1="156" y1="51" x2="175" y2="51" stroke="#76b900" stroke-width="1.5" stroke-dasharray="3,2"/>
+        <line x1="175" y1="51" x2="175" y2="200" stroke="#76b900" stroke-width="1.5" stroke-dasharray="3,2"/>
+      </svg>
+
+      <div class="legend">
+        <div class="leg-item"><div class="leg-dot" style="background:#8a6820;"></div>Compute Tray</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#2c3545;"></div>NVLink Switch</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#404855;"></div>Network/Mgmt</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MIDDLE: Compute Tray floor plan -->
+  <div class="col-wrap">
+    <div class="col-label">Compute Tray — Floor Plan</div>
+    <div class="panel">
+      <div class="panel-title">
+        Vera Rubin Compute Tray
+        <span class="badge">4× Superchip</span>
+      </div>
+      <!-- Tray SVG — top-down -->
+      <svg viewBox="0 0 420 360" width="100%" style="max-height:380px;" id="tray-nvl144">
+        <!-- PCB -->
+        <rect x="5" y="5" width="410" height="350" rx="6" fill="#1a2a1a" stroke="#2a3a2a" stroke-width="2"/>
+        <text x="210" y="18" text-anchor="middle" fill="#5a7a5a" font-size="8">Vera Rubin Compute Tray — Top View</text>
+
+        <!-- ── Superchip 1 (top-left) ─────────────── -->
+        <g transform="translate(18,24)" data-tip="Superchip 1: 1× Vera CPU + 2× Rubin GPU + 8× SoCaMM">
+          <!-- Superchip substrate -->
+          <rect x="0" y="0" width="188" height="158" rx="4" fill="#243024" stroke="#3a5a3a" stroke-width="1.5"/>
+          <text x="94" y="11" text-anchor="middle" fill="#6a9a6a" font-size="7.5" font-weight="700">Vera Rubin Superchip 1</text>
+          <!-- Rubin GPU 1 (big gold square) -->
+          <rect x="6" y="16" width="78" height="90" rx="3" fill="#c8a040" stroke="#e0b84a" stroke-width="1.5"/>
+          <text x="45" y="60" text-anchor="middle" fill="#1a0a00" font-size="9" font-weight="800">Rubin</text>
+          <text x="45" y="72" text-anchor="middle" fill="#2a1000" font-size="8" font-weight="700">GPU</text>
+          <text x="45" y="82" text-anchor="middle" fill="#3a2000" font-size="6.5">336B transistors</text>
+          <text x="45" y="91" text-anchor="middle" fill="#3a2000" font-size="6">TSMC N3</text>
+          <!-- HBM4 stacks beside GPU 1 (right side) -->
+          <rect x="88" y="16" width="16" height="90" rx="2" fill="#902020" stroke="#c03030" stroke-width="1"/>
+          <text x="96" y="67" text-anchor="middle" fill="#ffa" font-size="6" transform="rotate(-90,96,67)">HBM4 ×4</text>
+          <!-- Rubin GPU 2 -->
+          <rect x="108" y="16" width="74" height="90" rx="3" fill="#c8a040" stroke="#e0b84a" stroke-width="1.5"/>
+          <text x="145" y="60" text-anchor="middle" fill="#1a0a00" font-size="9" font-weight="800">Rubin</text>
+          <text x="145" y="72" text-anchor="middle" fill="#2a1000" font-size="8" font-weight="700">GPU</text>
+          <text x="145" y="82" text-anchor="middle" fill="#3a2000" font-size="6.5">288GB HBM4</text>
+          <!-- HBM4 stacks beside GPU 2 (right side) -->
+          <!-- already included in label -->
+          <!-- Vera CPU (smaller green die) -->
+          <rect x="6" y="110" width="52" height="40" rx="3" fill="#4a7a5a" stroke="#6a9a7a" stroke-width="1.5"/>
+          <text x="32" y="127" text-anchor="middle" fill="#dfd" font-size="8" font-weight="700">Vera CPU</text>
+          <text x="32" y="138" text-anchor="middle" fill="#bdb" font-size="6">88-core ARM</text>
+          <!-- SoCaMM modules (blue sticks) -->
+          <rect x="64" y="112" width="18" height="36" rx="2" fill="#3a5a8a" stroke="#5a7aaa" stroke-width="1"/>
+          <text x="73" y="133" text-anchor="middle" fill="#ccf" font-size="5.5" transform="rotate(-90,73,133)">SoCaMM</text>
+          <rect x="86" y="112" width="18" height="36" rx="2" fill="#3a5a8a" stroke="#5a7aaa" stroke-width="1"/>
+          <text x="95" y="133" text-anchor="middle" fill="#ccf" font-size="5.5" transform="rotate(-90,95,133)">SoCaMM</text>
+          <rect x="108" y="112" width="18" height="36" rx="2" fill="#3a5a8a" stroke="#5a7aaa" stroke-width="1"/>
+          <text x="117" y="133" text-anchor="middle" fill="#ccf" font-size="5.5" transform="rotate(-90,117,133)">SoCaMM</text>
+          <rect x="130" y="112" width="18" height="36" rx="2" fill="#3a5a8a" stroke="#5a7aaa" stroke-width="1"/>
+          <text x="139" y="133" text-anchor="middle" fill="#ccf" font-size="5.5" transform="rotate(-90,139,133)">SoCaMM</text>
+          <rect x="152" y="112" width="18" height="36" rx="2" fill="#3a5a8a" stroke="#5a7aaa" stroke-width="1"/>
+          <text x="161" y="133" text-anchor="middle" fill="#ccf" font-size="5.5" transform="rotate(-90,161,133)">SoCaMM</text>
+          <!-- NVLink-C2C bus line -->
+          <line x1="58" y1="61" x2="108" y2="61" stroke="#76b900" stroke-width="1" stroke-dasharray="2,1.5"/>
+          <text x="83" y="58" text-anchor="middle" fill="#76b900" font-size="5.5">NVLink-C2C</text>
+          <line x1="32" y1="110" x2="145" y2="110" stroke="#76b900" stroke-width="0.8" stroke-dasharray="2,1.5"/>
+        </g>
+
+        <!-- ── Superchip 2 (top-right) ─────────────── -->
+        <g transform="translate(218,24)" data-tip="Superchip 2: 1× Vera CPU + 2× Rubin GPU + 8× SoCaMM">
+          <rect x="0" y="0" width="188" height="158" rx="4" fill="#243024" stroke="#3a5a3a" stroke-width="1.5"/>
+          <text x="94" y="11" text-anchor="middle" fill="#6a9a6a" font-size="7.5" font-weight="700">Vera Rubin Superchip 2</text>
+          <rect x="6" y="16" width="78" height="90" rx="3" fill="#c8a040" stroke="#e0b84a" stroke-width="1.5"/>
+          <text x="45" y="60" text-anchor="middle" fill="#1a0a00" font-size="9" font-weight="800">Rubin</text>
+          <text x="45" y="72" text-anchor="middle" fill="#2a1000" font-size="8" font-weight="700">GPU</text>
+          <rect x="88" y="16" width="16" height="90" rx="2" fill="#902020" stroke="#c03030" stroke-width="1"/>
+          <text x="96" y="67" text-anchor="middle" fill="#ffa" font-size="6" transform="rotate(-90,96,67)">HBM4 ×4</text>
+          <rect x="108" y="16" width="74" height="90" rx="3" fill="#c8a040" stroke="#e0b84a" stroke-width="1.5"/>
+          <text x="145" y="60" text-anchor="middle" fill="#1a0a00" font-size="9" font-weight="800">Rubin</text>
+          <text x="145" y="72" text-anchor="middle" fill="#2a1000" font-size="8" font-weight="700">GPU</text>
+          <rect x="6" y="110" width="52" height="40" rx="3" fill="#4a7a5a" stroke="#6a9a7a" stroke-width="1.5"/>
+          <text x="32" y="127" text-anchor="middle" fill="#dfd" font-size="8" font-weight="700">Vera CPU</text>
+          <text x="32" y="138" text-anchor="middle" fill="#bdb" font-size="6">88-core ARM</text>
+          <rect x="64" y="112" width="18" height="36" rx="2" fill="#3a5a8a" stroke="#5a7aaa" stroke-width="1"/>
+          <text x="73" y="133" text-anchor="middle" fill="#ccf" font-size="5.5" transform="rotate(-90,73,133)">SoCaMM</text>
+          <rect x="86" y="112" width="18" height="36" rx="2" fill="#3a5a8a" stroke="#5a7aaa" stroke-width="1"/>
+          <text x="95" y="133" text-anchor="middle" fill="#ccf" font-size="5.5" transform="rotate(-90,95,133)">SoCaMM</text>
+          <rect x="108" y="112" width="18" height="36" rx="2" fill="#3a5a8a" stroke="#5a7aaa" stroke-width="1"/>
+          <text x="117" y="133" text-anchor="middle" fill="#ccf" font-size="5.5" transform="rotate(-90,117,133)">SoCaMM</text>
+          <rect x="130" y="112" width="18" height="36" rx="2" fill="#3a5a8a" stroke="#5a7aaa" stroke-width="1"/>
+          <text x="139" y="133" text-anchor="middle" fill="#ccf" font-size="5.5" transform="rotate(-90,139,133)">SoCaMM</text>
+          <rect x="152" y="112" width="18" height="36" rx="2" fill="#3a5a8a" stroke="#5a7aaa" stroke-width="1"/>
+          <text x="161" y="133" text-anchor="middle" fill="#ccf" font-size="5.5" transform="rotate(-90,161,133)">SoCaMM</text>
+          <line x1="58" y1="61" x2="108" y2="61" stroke="#76b900" stroke-width="1" stroke-dasharray="2,1.5"/>
+          <text x="83" y="58" text-anchor="middle" fill="#76b900" font-size="5.5">NVLink-C2C</text>
+        </g>
+
+        <!-- ── Superchip 3 (bottom-left) ─────────────── -->
+        <g transform="translate(18,192)" data-tip="Superchip 3">
+          <rect x="0" y="0" width="188" height="158" rx="4" fill="#243024" stroke="#3a5a3a" stroke-width="1.5"/>
+          <text x="94" y="11" text-anchor="middle" fill="#6a9a6a" font-size="7.5" font-weight="700">Vera Rubin Superchip 3</text>
+          <rect x="6" y="16" width="78" height="90" rx="3" fill="#c8a040" stroke="#e0b84a" stroke-width="1.5"/>
+          <text x="45" y="60" text-anchor="middle" fill="#1a0a00" font-size="9" font-weight="800">Rubin</text>
+          <text x="45" y="72" text-anchor="middle" fill="#2a1000" font-size="8" font-weight="700">GPU</text>
+          <rect x="88" y="16" width="16" height="90" rx="2" fill="#902020" stroke="#c03030" stroke-width="1"/>
+          <text x="96" y="67" text-anchor="middle" fill="#ffa" font-size="6" transform="rotate(-90,96,67)">HBM4 ×4</text>
+          <rect x="108" y="16" width="74" height="90" rx="3" fill="#c8a040" stroke="#e0b84a" stroke-width="1.5"/>
+          <text x="145" y="60" text-anchor="middle" fill="#1a0a00" font-size="9" font-weight="800">Rubin</text>
+          <text x="145" y="72" text-anchor="middle" fill="#2a1000" font-size="8" font-weight="700">GPU</text>
+          <rect x="6" y="110" width="52" height="40" rx="3" fill="#4a7a5a" stroke="#6a9a7a" stroke-width="1.5"/>
+          <text x="32" y="127" text-anchor="middle" fill="#dfd" font-size="8" font-weight="700">Vera CPU</text>
+          <text x="32" y="138" text-anchor="middle" fill="#bdb" font-size="6">88-core ARM</text>
+          <rect x="64" y="112" width="18" height="36" rx="2" fill="#3a5a8a" stroke="#5a7aaa" stroke-width="1"/>
+          <rect x="86" y="112" width="18" height="36" rx="2" fill="#3a5a8a" stroke="#5a7aaa" stroke-width="1"/>
+          <rect x="108" y="112" width="18" height="36" rx="2" fill="#3a5a8a" stroke="#5a7aaa" stroke-width="1"/>
+          <rect x="130" y="112" width="18" height="36" rx="2" fill="#3a5a8a" stroke="#5a7aaa" stroke-width="1"/>
+          <rect x="152" y="112" width="18" height="36" rx="2" fill="#3a5a8a" stroke="#5a7aaa" stroke-width="1"/>
+          <text x="112" y="134" text-anchor="middle" fill="#ccf" font-size="5.5">SoCaMM ×5</text>
+          <line x1="58" y1="61" x2="108" y2="61" stroke="#76b900" stroke-width="1" stroke-dasharray="2,1.5"/>
+          <text x="83" y="58" text-anchor="middle" fill="#76b900" font-size="5.5">NVLink-C2C</text>
+        </g>
+
+        <!-- ── Superchip 4 (bottom-right) ─────────────── -->
+        <g transform="translate(218,192)" data-tip="Superchip 4">
+          <rect x="0" y="0" width="188" height="158" rx="4" fill="#243024" stroke="#3a5a3a" stroke-width="1.5"/>
+          <text x="94" y="11" text-anchor="middle" fill="#6a9a6a" font-size="7.5" font-weight="700">Vera Rubin Superchip 4</text>
+          <rect x="6" y="16" width="78" height="90" rx="3" fill="#c8a040" stroke="#e0b84a" stroke-width="1.5"/>
+          <text x="45" y="60" text-anchor="middle" fill="#1a0a00" font-size="9" font-weight="800">Rubin</text>
+          <text x="45" y="72" text-anchor="middle" fill="#2a1000" font-size="8" font-weight="700">GPU</text>
+          <rect x="88" y="16" width="16" height="90" rx="2" fill="#902020" stroke="#c03030" stroke-width="1"/>
+          <text x="96" y="67" text-anchor="middle" fill="#ffa" font-size="6" transform="rotate(-90,96,67)">HBM4 ×4</text>
+          <rect x="108" y="16" width="74" height="90" rx="3" fill="#c8a040" stroke="#e0b84a" stroke-width="1.5"/>
+          <text x="145" y="60" text-anchor="middle" fill="#1a0a00" font-size="9" font-weight="800">Rubin</text>
+          <text x="145" y="72" text-anchor="middle" fill="#2a1000" font-size="8" font-weight="700">GPU</text>
+          <rect x="6" y="110" width="52" height="40" rx="3" fill="#4a7a5a" stroke="#6a9a7a" stroke-width="1.5"/>
+          <text x="32" y="127" text-anchor="middle" fill="#dfd" font-size="8" font-weight="700">Vera CPU</text>
+          <text x="32" y="138" text-anchor="middle" fill="#bdb" font-size="6">88-core ARM</text>
+          <rect x="64" y="112" width="18" height="36" rx="2" fill="#3a5a8a" stroke="#5a7aaa" stroke-width="1"/>
+          <rect x="86" y="112" width="18" height="36" rx="2" fill="#3a5a8a" stroke="#5a7aaa" stroke-width="1"/>
+          <rect x="108" y="112" width="18" height="36" rx="2" fill="#3a5a8a" stroke="#5a7aaa" stroke-width="1"/>
+          <rect x="130" y="112" width="18" height="36" rx="2" fill="#3a5a8a" stroke="#5a7aaa" stroke-width="1"/>
+          <rect x="152" y="112" width="18" height="36" rx="2" fill="#3a5a8a" stroke="#5a7aaa" stroke-width="1"/>
+          <text x="112" y="134" text-anchor="middle" fill="#ccf" font-size="5.5">SoCaMM ×5</text>
+          <line x1="58" y1="61" x2="108" y2="61" stroke="#76b900" stroke-width="1" stroke-dasharray="2,1.5"/>
+          <text x="83" y="58" text-anchor="middle" fill="#76b900" font-size="5.5">NVLink-C2C</text>
+        </g>
+
+        <!-- NVLink6 bus across superchips -->
+        <line x1="206" y1="105" x2="218" y2="105" stroke="#76b900" stroke-width="2" stroke-dasharray="3,2"/>
+        <line x1="206" y1="275" x2="218" y2="275" stroke="#76b900" stroke-width="2" stroke-dasharray="3,2"/>
+        <line x1="112" y1="182" x2="112" y2="192" stroke="#76b900" stroke-width="2" stroke-dasharray="3,2"/>
+        <line x1="312" y1="182" x2="312" y2="192" stroke="#76b900" stroke-width="2" stroke-dasharray="3,2"/>
+      </svg>
+
+      <div class="legend" style="margin-top:8px;">
+        <div class="leg-item"><div class="leg-dot" style="background:#c8a040;"></div>Rubin GPU</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#4a7a5a;"></div>Vera CPU</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#902020;"></div>HBM4</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#3a5a8a;"></div>SoCaMM</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#76b900;border-radius:2px;"></div>NVLink-C2C</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Chip die shots -->
+  <div class="col-wrap">
+    <div class="col-label">Silicon Die Shots</div>
+    <div class="panel">
+      <div class="panel-title">Individual Chip Architecture</div>
+
+      <div class="chip-grid">
+
+        <!-- Rubin GPU die -->
+        <div>
+          <svg viewBox="0 0 180 160" width="100%">
+            <!-- Die substrate -->
+            <rect x="2" y="2" width="176" height="156" rx="4" fill="#1a2a1a" stroke="#2a3a2a" stroke-width="1.5"/>
+            <text x="90" y="13" text-anchor="middle" fill="#6a8a6a" font-size="7.5" font-weight="700">RUBIN GPU DIE</text>
+            <!-- 2 reticle compute dies (top half, side by side) -->
+            <!-- Left compute die -->
+            <rect x="8" y="18" width="74" height="90" rx="3" fill="#5a7a5a" stroke="#7a9a7a" stroke-width="1.5"/>
+            <text x="45" y="30" text-anchor="middle" fill="#cec" font-size="6.5" font-weight="700">Compute Die A</text>
+            <!-- SM grid 6×8 -->
+            <g fill="#3a5a3a" stroke="#4a6a4a" stroke-width="0.5">
+              <rect x="11" y="34" width="10" height="9" rx="1"/><rect x="23" y="34" width="10" height="9" rx="1"/>
+              <rect x="35" y="34" width="10" height="9" rx="1"/><rect x="47" y="34" width="10" height="9" rx="1"/>
+              <rect x="59" y="34" width="10" height="9" rx="1"/><rect x="71" y="34" width="9" height="9" rx="1"/>
+              <rect x="11" y="45" width="10" height="9" rx="1"/><rect x="23" y="45" width="10" height="9" rx="1"/>
+              <rect x="35" y="45" width="10" height="9" rx="1"/><rect x="47" y="45" width="10" height="9" rx="1"/>
+              <rect x="59" y="45" width="10" height="9" rx="1"/><rect x="71" y="45" width="9" height="9" rx="1"/>
+              <rect x="11" y="56" width="10" height="9" rx="1"/><rect x="23" y="56" width="10" height="9" rx="1"/>
+              <rect x="35" y="56" width="10" height="9" rx="1"/><rect x="47" y="56" width="10" height="9" rx="1"/>
+              <rect x="59" y="56" width="10" height="9" rx="1"/><rect x="71" y="56" width="9" height="9" rx="1"/>
+              <rect x="11" y="67" width="10" height="9" rx="1"/><rect x="23" y="67" width="10" height="9" rx="1"/>
+              <rect x="35" y="67" width="10" height="9" rx="1"/><rect x="47" y="67" width="10" height="9" rx="1"/>
+              <rect x="59" y="67" width="10" height="9" rx="1"/><rect x="71" y="67" width="9" height="9" rx="1"/>
+              <rect x="11" y="78" width="10" height="9" rx="1"/><rect x="23" y="78" width="10" height="9" rx="1"/>
+              <rect x="35" y="78" width="10" height="9" rx="1"/><rect x="47" y="78" width="10" height="9" rx="1"/>
+              <rect x="59" y="78" width="10" height="9" rx="1"/><rect x="71" y="78" width="9" height="9" rx="1"/>
+              <rect x="11" y="89" width="10" height="9" rx="1"/><rect x="23" y="89" width="10" height="9" rx="1"/>
+              <rect x="35" y="89" width="10" height="9" rx="1"/><rect x="47" y="89" width="10" height="9" rx="1"/>
+              <rect x="59" y="89" width="10" height="9" rx="1"/><rect x="71" y="89" width="9" height="9" rx="1"/>
+            </g>
+            <text x="45" y="104" text-anchor="middle" fill="#8aba8a" font-size="5.5">SM Array (partial)</text>
+
+            <!-- Right compute die -->
+            <rect x="86" y="18" width="74" height="90" rx="3" fill="#5a7a5a" stroke="#7a9a7a" stroke-width="1.5"/>
+            <text x="123" y="30" text-anchor="middle" fill="#cec" font-size="6.5" font-weight="700">Compute Die B</text>
+            <g fill="#3a5a3a" stroke="#4a6a4a" stroke-width="0.5">
+              <rect x="89" y="34" width="10" height="9" rx="1"/><rect x="101" y="34" width="10" height="9" rx="1"/>
+              <rect x="113" y="34" width="10" height="9" rx="1"/><rect x="125" y="34" width="10" height="9" rx="1"/>
+              <rect x="137" y="34" width="10" height="9" rx="1"/><rect x="149" y="34" width="9" height="9" rx="1"/>
+              <rect x="89" y="45" width="10" height="9" rx="1"/><rect x="101" y="45" width="10" height="9" rx="1"/>
+              <rect x="113" y="45" width="10" height="9" rx="1"/><rect x="125" y="45" width="10" height="9" rx="1"/>
+              <rect x="137" y="45" width="10" height="9" rx="1"/><rect x="149" y="45" width="9" height="9" rx="1"/>
+              <rect x="89" y="56" width="10" height="9" rx="1"/><rect x="101" y="56" width="10" height="9" rx="1"/>
+              <rect x="113" y="56" width="10" height="9" rx="1"/><rect x="125" y="56" width="10" height="9" rx="1"/>
+              <rect x="137" y="56" width="10" height="9" rx="1"/><rect x="149" y="56" width="9" height="9" rx="1"/>
+              <rect x="89" y="67" width="10" height="9" rx="1"/><rect x="101" y="67" width="10" height="9" rx="1"/>
+              <rect x="113" y="67" width="10" height="9" rx="1"/><rect x="125" y="67" width="10" height="9" rx="1"/>
+              <rect x="137" y="67" width="10" height="9" rx="1"/><rect x="149" y="67" width="9" height="9" rx="1"/>
+              <rect x="89" y="78" width="10" height="9" rx="1"/><rect x="101" y="78" width="10" height="9" rx="1"/>
+              <rect x="113" y="78" width="10" height="9" rx="1"/><rect x="125" y="78" width="10" height="9" rx="1"/>
+              <rect x="137" y="78" width="10" height="9" rx="1"/><rect x="149" y="78" width="9" height="9" rx="1"/>
+              <rect x="89" y="89" width="10" height="9" rx="1"/><rect x="101" y="89" width="10" height="9" rx="1"/>
+              <rect x="113" y="89" width="10" height="9" rx="1"/><rect x="125" y="89" width="10" height="9" rx="1"/>
+              <rect x="137" y="89" width="10" height="9" rx="1"/><rect x="149" y="89" width="9" height="9" rx="1"/>
+            </g>
+            <text x="123" y="104" text-anchor="middle" fill="#8aba8a" font-size="5.5">SM Array (partial)</text>
+
+            <!-- 2 I/O dies (bottom strip) -->
+            <rect x="8" y="112" width="74" height="26" rx="2" fill="#4a6a8a" stroke="#6a8aaa" stroke-width="1"/>
+            <text x="45" y="128" text-anchor="middle" fill="#ccf" font-size="6.5" font-weight="700">I/O Die A</text>
+            <rect x="86" y="112" width="74" height="26" rx="2" fill="#4a6a8a" stroke="#6a8aaa" stroke-width="1"/>
+            <text x="123" y="128" text-anchor="middle" fill="#ccf" font-size="6.5" font-weight="700">I/O Die B</text>
+            <!-- NVLink C2C pads -->
+            <rect x="8" y="140" width="172" height="14" rx="2" fill="#2a3a2a" stroke="#3a4a3a" stroke-width="1"/>
+            <text x="90" y="150" text-anchor="middle" fill="#76b900" font-size="6">NVLink-C2C Interconnect Pads</text>
+          </svg>
+          <div class="chip-caption">Rubin GPU · TSMC N3 · 336B transistors</div>
+        </div>
+
+        <!-- Vera CPU die -->
+        <div>
+          <svg viewBox="0 0 180 160" width="100%">
+            <rect x="2" y="2" width="176" height="156" rx="4" fill="#1a2a1e" stroke="#2a3a2e" stroke-width="1.5"/>
+            <text x="90" y="13" text-anchor="middle" fill="#6a9a6a" font-size="7.5" font-weight="700">VERA CPU DIE</text>
+            <!-- monolithic die body -->
+            <rect x="8" y="18" width="164" height="120" rx="4" fill="#3a5a40" stroke="#5a7a5a" stroke-width="1.5"/>
+            <!-- CPU core array (8 cols × 11 rows ≈ 88 Olympus cores) -->
+            <g fill="#2a4a30" stroke="#4a6a4a" stroke-width="0.5">
+              <!-- row 1 -->
+              <rect x="12" y="22" width="17" height="12" rx="1.5"/><rect x="31" y="22" width="17" height="12" rx="1.5"/>
+              <rect x="50" y="22" width="17" height="12" rx="1.5"/><rect x="69" y="22" width="17" height="12" rx="1.5"/>
+              <rect x="88" y="22" width="17" height="12" rx="1.5"/><rect x="107" y="22" width="17" height="12" rx="1.5"/>
+              <rect x="126" y="22" width="17" height="12" rx="1.5"/><rect x="145" y="22" width="17" height="12" rx="1.5"/>
+              <!-- row 2 -->
+              <rect x="12" y="36" width="17" height="12" rx="1.5"/><rect x="31" y="36" width="17" height="12" rx="1.5"/>
+              <rect x="50" y="36" width="17" height="12" rx="1.5"/><rect x="69" y="36" width="17" height="12" rx="1.5"/>
+              <rect x="88" y="36" width="17" height="12" rx="1.5"/><rect x="107" y="36" width="17" height="12" rx="1.5"/>
+              <rect x="126" y="36" width="17" height="12" rx="1.5"/><rect x="145" y="36" width="17" height="12" rx="1.5"/>
+              <!-- row 3 -->
+              <rect x="12" y="50" width="17" height="12" rx="1.5"/><rect x="31" y="50" width="17" height="12" rx="1.5"/>
+              <rect x="50" y="50" width="17" height="12" rx="1.5"/><rect x="69" y="50" width="17" height="12" rx="1.5"/>
+              <rect x="88" y="50" width="17" height="12" rx="1.5"/><rect x="107" y="50" width="17" height="12" rx="1.5"/>
+              <rect x="126" y="50" width="17" height="12" rx="1.5"/><rect x="145" y="50" width="17" height="12" rx="1.5"/>
+              <!-- row 4 -->
+              <rect x="12" y="64" width="17" height="12" rx="1.5"/><rect x="31" y="64" width="17" height="12" rx="1.5"/>
+              <rect x="50" y="64" width="17" height="12" rx="1.5"/><rect x="69" y="64" width="17" height="12" rx="1.5"/>
+              <rect x="88" y="64" width="17" height="12" rx="1.5"/><rect x="107" y="64" width="17" height="12" rx="1.5"/>
+              <rect x="126" y="64" width="17" height="12" rx="1.5"/><rect x="145" y="64" width="17" height="12" rx="1.5"/>
+              <!-- row 5 -->
+              <rect x="12" y="78" width="17" height="12" rx="1.5"/><rect x="31" y="78" width="17" height="12" rx="1.5"/>
+              <rect x="50" y="78" width="17" height="12" rx="1.5"/><rect x="69" y="78" width="17" height="12" rx="1.5"/>
+              <rect x="88" y="78" width="17" height="12" rx="1.5"/><rect x="107" y="78" width="17" height="12" rx="1.5"/>
+              <rect x="126" y="78" width="17" height="12" rx="1.5"/><rect x="145" y="78" width="17" height="12" rx="1.5"/>
+              <!-- row 6 (partial - 8 cores) -->
+              <rect x="12" y="92" width="17" height="12" rx="1.5"/><rect x="31" y="92" width="17" height="12" rx="1.5"/>
+              <rect x="50" y="92" width="17" height="12" rx="1.5"/><rect x="69" y="92" width="17" height="12" rx="1.5"/>
+              <rect x="88" y="92" width="17" height="12" rx="1.5"/><rect x="107" y="92" width="17" height="12" rx="1.5"/>
+              <rect x="126" y="92" width="17" height="12" rx="1.5"/><rect x="145" y="92" width="17" height="12" rx="1.5"/>
+            </g>
+            <text x="90" y="103" text-anchor="middle" fill="#8aba8a" font-size="5.5">88× Olympus ARM v9 Cores (3 spare)</text>
+            <!-- L3 cache block -->
+            <rect x="8" y="107" width="164" height="24" rx="2" fill="#2a4040" stroke="#3a6060" stroke-width="1"/>
+            <text x="90" y="122" text-anchor="middle" fill="#8acaca" font-size="7" font-weight="700">L3 Cache — 162 MB</text>
+            <!-- NVLink pads -->
+            <rect x="8" y="140" width="164" height="14" rx="2" fill="#1e2a1e" stroke="#3a4a3a" stroke-width="1"/>
+            <text x="90" y="150" text-anchor="middle" fill="#76b900" font-size="6">NVLink-C2C · 1.8 TB/s</text>
+          </svg>
+          <div class="chip-caption">Vera CPU · TSMC N3 · 88-core ARM v9</div>
+        </div>
+
+        <!-- HBM4 stack -->
+        <div>
+          <svg viewBox="0 0 180 160" width="100%">
+            <rect x="2" y="2" width="176" height="156" rx="4" fill="#2a1010" stroke="#3a2020" stroke-width="1.5"/>
+            <text x="90" y="13" text-anchor="middle" fill="#c06060" font-size="7.5" font-weight="700">HBM4 MEMORY STACK</text>
+            <!-- 12 DRAM die layers -->
+            <g>
+              <rect x="28" y="20" width="124" height="11" rx="2" fill="#8a2020" stroke="#c03030" stroke-width="1"/>
+              <text x="90" y="29" text-anchor="middle" fill="#fcc" font-size="6">DRAM Die 12 (Top)</text>
+              <rect x="28" y="33" width="124" height="11" rx="2" fill="#7a1a1a" stroke="#a02828" stroke-width="1"/>
+              <text x="90" y="42" text-anchor="middle" fill="#faa" font-size="6">DRAM Die 11</text>
+              <rect x="28" y="46" width="124" height="11" rx="2" fill="#7a1a1a" stroke="#a02828" stroke-width="1"/>
+              <text x="90" y="55" text-anchor="middle" fill="#faa" font-size="6">DRAM Die 10</text>
+              <rect x="28" y="59" width="124" height="11" rx="2" fill="#7a1a1a" stroke="#a02828" stroke-width="1"/>
+              <text x="90" y="68" text-anchor="middle" fill="#faa" font-size="6">DRAM Die 9</text>
+              <rect x="28" y="72" width="124" height="11" rx="2" fill="#6a1818" stroke="#9a2020" stroke-width="1"/>
+              <text x="90" y="81" text-anchor="middle" fill="#f99" font-size="6">DRAM Die 8</text>
+              <rect x="28" y="85" width="124" height="11" rx="2" fill="#6a1818" stroke="#9a2020" stroke-width="1"/>
+              <text x="90" y="94" text-anchor="middle" fill="#f99" font-size="6">DRAM Die 7</text>
+              <rect x="28" y="98" width="124" height="11" rx="2" fill="#5a1414" stroke="#8a1818" stroke-width="1"/>
+              <text x="90" y="107" text-anchor="middle" fill="#f88" font-size="6">DRAM Die 6</text>
+              <rect x="28" y="111" width="124" height="11" rx="2" fill="#5a1414" stroke="#8a1818" stroke-width="1"/>
+              <text x="90" y="120" text-anchor="middle" fill="#f88" font-size="6">DRAM Die 5</text>
+              <!-- Base die -->
+              <rect x="22" y="124" width="136" height="18" rx="2" fill="#3a2060" stroke="#5a40a0" stroke-width="1.5"/>
+              <text x="90" y="136" text-anchor="middle" fill="#ccf" font-size="7" font-weight="700">Logic Base Die</text>
+              <text x="90" y="144" text-anchor="middle" fill="#aaa" font-size="5.5">Through-Silicon Vias (TSV)</text>
+            </g>
+            <!-- TSV illustration dots -->
+            <g fill="#5a40a0" opacity="0.5">
+              <circle cx="35" cy="128" r="1.5"/><circle cx="45" cy="128" r="1.5"/><circle cx="55" cy="128" r="1.5"/>
+              <circle cx="65" cy="128" r="1.5"/><circle cx="75" cy="128" r="1.5"/><circle cx="85" cy="128" r="1.5"/>
+              <circle cx="95" cy="128" r="1.5"/><circle cx="105" cy="128" r="1.5"/>
+            </g>
+          </svg>
+          <div class="chip-caption">HBM4 · 36 GB/stack · 8 stacks/GPU · 22 TB/s</div>
+        </div>
+
+        <!-- SoCaMM / ConnectX-9 -->
+        <div>
+          <svg viewBox="0 0 180 160" width="100%">
+            <rect x="2" y="2" width="176" height="156" rx="4" fill="#101828" stroke="#202838" stroke-width="1.5"/>
+            <text x="90" y="13" text-anchor="middle" fill="#6a8aaa" font-size="7.5" font-weight="700">SoCaMM + ConnectX-9</text>
+
+            <!-- SoCaMM top half -->
+            <rect x="6" y="18" width="168" height="62" rx="3" fill="#1a2a40" stroke="#2a3a5a" stroke-width="1.5"/>
+            <text x="90" y="29" text-anchor="middle" fill="#8aaaca" font-size="7" font-weight="700">SoCaMM Module (LPDDR5X)</text>
+            <!-- LPDDR5X chips on module -->
+            <g fill="#2a3a5a" stroke="#3a4a6a" stroke-width="0.8">
+              <rect x="12" y="34" width="26" height="20" rx="2"/><text x="25" y="47" text-anchor="middle" fill="#aac" font-size="5.5">LPDDR5X</text>
+              <rect x="42" y="34" width="26" height="20" rx="2"/><text x="55" y="47" text-anchor="middle" fill="#aac" font-size="5.5">LPDDR5X</text>
+              <rect x="72" y="34" width="26" height="20" rx="2"/><text x="85" y="47" text-anchor="middle" fill="#aac" font-size="5.5">LPDDR5X</text>
+              <rect x="102" y="34" width="26" height="20" rx="2"/><text x="115" y="47" text-anchor="middle" fill="#aac" font-size="5.5">LPDDR5X</text>
+              <rect x="132" y="34" width="26" height="20" rx="2"/><text x="145" y="47" text-anchor="middle" fill="#aac" font-size="5.5">LPDDR5X</text>
+              <!-- row 2 -->
+              <rect x="12" y="57" width="26" height="18" rx="2"/><text x="25" y="68" text-anchor="middle" fill="#aac" font-size="5.5">LPDDR5X</text>
+              <rect x="42" y="57" width="26" height="18" rx="2"/><text x="55" y="68" text-anchor="middle" fill="#aac" font-size="5.5">LPDDR5X</text>
+              <rect x="72" y="57" width="26" height="18" rx="2"/><text x="85" y="68" text-anchor="middle" fill="#aac" font-size="5.5">LPDDR5X</text>
+              <rect x="102" y="57" width="26" height="18" rx="2"/><text x="115" y="68" text-anchor="middle" fill="#aac" font-size="5.5">LPDDR5X</text>
+            </g>
+            <text x="90" y="76" text-anchor="middle" fill="#6a8aaa" font-size="5.5">~1 TB LPDDR5X fast memory per module</text>
+
+            <!-- ConnectX-9 bottom half -->
+            <rect x="6" y="86" width="168" height="66" rx="3" fill="#0a1e28" stroke="#1a3040" stroke-width="1.5"/>
+            <text x="90" y="97" text-anchor="middle" fill="#6ad0d0" font-size="7" font-weight="700">ConnectX-9 SuperNIC</text>
+            <!-- NIC die -->
+            <rect x="22" y="102" width="76" height="44" rx="3" fill="#1a3838" stroke="#2a5050" stroke-width="1.5"/>
+            <text x="60" y="118" text-anchor="middle" fill="#8adada" font-size="7" font-weight="700">NIC SoC</text>
+            <text x="60" y="128" text-anchor="middle" fill="#6ababa" font-size="6">1.6 Tb/s RDMA</text>
+            <text x="60" y="138" text-anchor="middle" fill="#5a9a9a" font-size="5.5">BlueField-4 DPU</text>
+            <!-- SerDes lanes illustration -->
+            <g fill="#1a5060" stroke="#2a7080" stroke-width="0.8">
+              <rect x="102" y="103" width="8" height="42" rx="1"/>
+              <rect x="112" y="103" width="8" height="42" rx="1"/>
+              <rect x="122" y="103" width="8" height="42" rx="1"/>
+              <rect x="132" y="103" width="8" height="42" rx="1"/>
+              <rect x="142" y="103" width="8" height="42" rx="1"/>
+              <rect x="152" y="103" width="8" height="42" rx="1"/>
+            </g>
+            <text x="135" y="152" text-anchor="middle" fill="#4a8898" font-size="5.5">PAM4 SerDes</text>
+          </svg>
+          <div class="chip-caption">SoCaMM (75 TB/rack) · CX-9 SuperNIC (1.6 Tb/s)</div>
+        </div>
+
+      </div><!-- chip-grid -->
+    </div>
+  </div>
+
+  <!-- Stats bar -->
+  <div class="stats-bar">
+    <div class="stat-item">
+      <div class="stat-val">3.6<span class="stat-unit"> EF</span></div>
+      <div class="stat-label">FP4 Inference</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-val">1.2<span class="stat-unit"> EF</span></div>
+      <div class="stat-label">FP8 Training</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-val">13<span class="stat-unit"> TB/s</span></div>
+      <div class="stat-label">HBM4 Bandwidth</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-val">75<span class="stat-unit"> TB</span></div>
+      <div class="stat-label">Fast Memory</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-val">260<span class="stat-unit"> TB/s</span></div>
+      <div class="stat-label">NVLink 6 BW</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-val">28.8<span class="stat-unit"> TB/s</span></div>
+      <div class="stat-label">ConnectX-9</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-val">144</div>
+      <div class="stat-label">GPUs / Rack</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-val">3.3×</div>
+      <div class="stat-label">vs GB300 NVL72</div>
+    </div>
+  </div>
+
+</div><!-- #tab-nvl144 -->
+
+
+<!-- ═══════════════════════ NVL72 ═══════════════════════ -->
+<div id="tab-nvl72" class="content-area">
+
+  <div class="col-wrap">
+    <div class="col-label">Rack System</div>
+    <div class="panel">
+      <div class="panel-title">Oberon Rack — NVL72 <span class="badge">18U</span></div>
+      <svg viewBox="0 0 180 400" width="100%" style="max-height:420px;">
+        <rect x="10" y="5" width="160" height="390" rx="5" fill="#1c1c1c" stroke="#444" stroke-width="2"/>
+        <rect x="10" y="5" width="14" height="390" rx="2" fill="#2a2a2a"/>
+        <rect x="156" y="5" width="14" height="390" rx="2" fill="#2a2a2a"/>
+        <rect x="24" y="12" width="132" height="18" rx="2" fill="#404855" stroke="#5a6070" stroke-width="1"/>
+        <text x="90" y="24" text-anchor="middle" fill="#aab" font-size="7">InfiniBand Switch</text>
+        <!-- 4 compute trays — tray 1 highlighted -->
+        <rect x="24" y="33" width="132" height="54" rx="2" fill="#8a6820" stroke="#76b900" stroke-width="2.5"/>
+        <text x="90" y="55" text-anchor="middle" fill="#ffe" font-size="9" font-weight="700">Compute Tray 1</text>
+        <text x="90" y="68" text-anchor="middle" fill="#ffd" font-size="7">4× Vera Rubin Superchip</text>
+        <rect x="24" y="90" width="132" height="54" rx="2" fill="#6a5010" stroke="#554010" stroke-width="1"/>
+        <text x="90" y="120" text-anchor="middle" fill="#cca" font-size="8">Compute Tray 2</text>
+        <rect x="24" y="147" width="132" height="54" rx="2" fill="#6a5010" stroke="#554010" stroke-width="1"/>
+        <text x="90" y="177" text-anchor="middle" fill="#cca" font-size="8">Compute Tray 3</text>
+        <rect x="24" y="204" width="132" height="54" rx="2" fill="#6a5010" stroke="#554010" stroke-width="1"/>
+        <text x="90" y="234" text-anchor="middle" fill="#cca" font-size="8">Compute Tray 4</text>
+        <rect x="24" y="261" width="132" height="22" rx="2" fill="#2c3545" stroke="#3c4a60" stroke-width="1"/>
+        <text x="90" y="275" text-anchor="middle" fill="#8ad" font-size="7">NVLink 6 Switch</text>
+        <rect x="24" y="286" width="132" height="22" rx="2" fill="#2c3545" stroke="#3c4a60" stroke-width="1"/>
+        <text x="90" y="300" text-anchor="middle" fill="#8ad" font-size="7">NVLink 6 Switch</text>
+        <rect x="24" y="311" width="132" height="22" rx="2" fill="#222" stroke="#333" stroke-width="1"/>
+        <text x="90" y="325" text-anchor="middle" fill="#666" font-size="6.5">PSU</text>
+      </svg>
+    </div>
+  </div>
+
+  <div class="col-wrap">
+    <div class="col-label">Compute Tray</div>
+    <div class="panel">
+      <div class="panel-title">Same as NVL144 <span class="badge">4× Superchip</span></div>
+      <p style="font-size:12px;color:#666;padding:8px;line-height:1.7;">
+        Each Vera Rubin Compute Tray is identical between NVL144 and NVL72.<br><br>
+        <strong>NVL144</strong> uses 8 compute trays (16 rows × 9 Superchips = 144 GPUs).<br>
+        <strong>NVL72</strong> uses 4 compute trays (72 GPUs total).<br><br>
+        Same 4× Superchip layout per tray — see NVL144 tab for full floor plan.
+      </p>
+    </div>
+  </div>
+
+  <div class="col-wrap">
+    <div class="col-label">Key Differences</div>
+    <div class="panel">
+      <div class="panel-title">NVL72 vs NVL144</div>
+      <table style="width:100%;font-size:12px;border-collapse:collapse;">
+        <thead>
+          <tr style="background:#f0f0f0;">
+            <th style="padding:8px;text-align:left;border-bottom:2px solid #76b900;color:#333;">Metric</th>
+            <th style="padding:8px;text-align:center;border-bottom:2px solid #76b900;color:#76b900;">NVL72</th>
+            <th style="padding:8px;text-align:center;border-bottom:2px solid #76b900;color:#76b900;">NVL144</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:1px solid #eee;"><td style="padding:7px 8px;color:#555;">GPUs/rack</td><td style="text-align:center;font-weight:600;">72</td><td style="text-align:center;font-weight:600;">144</td></tr>
+          <tr style="border-bottom:1px solid #eee;background:#fafafa;"><td style="padding:7px 8px;color:#555;">FP4 Inference</td><td style="text-align:center;font-weight:600;">1.8 EF</td><td style="text-align:center;font-weight:600;">3.6 EF</td></tr>
+          <tr style="border-bottom:1px solid #eee;"><td style="padding:7px 8px;color:#555;">FP8 Training</td><td style="text-align:center;font-weight:600;">600 PF</td><td style="text-align:center;font-weight:600;">1.2 EF</td></tr>
+          <tr style="border-bottom:1px solid #eee;background:#fafafa;"><td style="padding:7px 8px;color:#555;">Fast Memory</td><td style="text-align:center;font-weight:600;">37.5 TB</td><td style="text-align:center;font-weight:600;">75 TB</td></tr>
+          <tr style="border-bottom:1px solid #eee;"><td style="padding:7px 8px;color:#555;">NVLink6 BW</td><td style="text-align:center;font-weight:600;">130 TB/s</td><td style="text-align:center;font-weight:600;">260 TB/s</td></tr>
+          <tr style="border-bottom:1px solid #eee;background:#fafafa;"><td style="padding:7px 8px;color:#555;">Compute Trays</td><td style="text-align:center;font-weight:600;">4</td><td style="text-align:center;font-weight:600;">8</td></tr>
+          <tr><td style="padding:7px 8px;color:#555;">vs GB300 NVL72</td><td style="text-align:center;font-weight:600;">1.65×</td><td style="text-align:center;font-weight:600;">3.3×</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat-item"><div class="stat-val">1.8<span class="stat-unit"> EF</span></div><div class="stat-label">FP4 Inference</div></div>
+    <div class="stat-item"><div class="stat-val">600<span class="stat-unit"> PF</span></div><div class="stat-label">FP8 Training</div></div>
+    <div class="stat-item"><div class="stat-val">6.5<span class="stat-unit"> TB/s</span></div><div class="stat-label">HBM4 Bandwidth</div></div>
+    <div class="stat-item"><div class="stat-val">37.5<span class="stat-unit"> TB</span></div><div class="stat-label">Fast Memory</div></div>
+    <div class="stat-item"><div class="stat-val">130<span class="stat-unit"> TB/s</span></div><div class="stat-label">NVLink 6 BW</div></div>
+    <div class="stat-item"><div class="stat-val">72</div><div class="stat-label">GPUs / Rack</div></div>
+    <div class="stat-item"><div class="stat-val">1.65×</div><div class="stat-label">vs GB300 NVL72</div></div>
+  </div>
+
+</div><!-- #tab-nvl72 -->
+
+
+<!-- ═══════════════════════ GB300 NVL72 ═══════════════════════ -->
+<div id="tab-gb300" class="content-area">
+
+  <div class="col-wrap">
+    <div class="col-label">Rack System</div>
+    <div class="panel">
+      <div class="panel-title">GB300 NVL72 <span class="badge">Current Gen</span></div>
+      <svg viewBox="0 0 180 400" width="100%" style="max-height:420px;">
+        <rect x="10" y="5" width="160" height="390" rx="5" fill="#1c1c1c" stroke="#444" stroke-width="2"/>
+        <rect x="10" y="5" width="14" height="390" rx="2" fill="#2a2a2a"/>
+        <rect x="156" y="5" width="14" height="390" rx="2" fill="#2a2a2a"/>
+        <rect x="24" y="12" width="132" height="18" rx="2" fill="#404855" stroke="#5a6070" stroke-width="1"/>
+        <text x="90" y="24" text-anchor="middle" fill="#aab" font-size="7">NVSwitch / Network</text>
+        <!-- GB200 NVL72 trays -->
+        <rect x="24" y="33" width="132" height="46" rx="2" fill="#5a3820" stroke="#76b900" stroke-width="2"/>
+        <text x="90" y="52" text-anchor="middle" fill="#ffe" font-size="8" font-weight="700">GB200 Compute Tray 1</text>
+        <text x="90" y="63" text-anchor="middle" fill="#ffd" font-size="6.5">4× GB200 Superchip</text>
+        <rect x="24" y="82" width="132" height="46" rx="2" fill="#4a2810" stroke="#3a1800" stroke-width="1"/>
+        <text x="90" y="108" text-anchor="middle" fill="#cca" font-size="7.5">GB200 Compute Tray 2</text>
+        <rect x="24" y="131" width="132" height="46" rx="2" fill="#4a2810" stroke="#3a1800" stroke-width="1"/>
+        <text x="90" y="157" text-anchor="middle" fill="#cca" font-size="7.5">GB200 Compute Tray 3</text>
+        <rect x="24" y="180" width="132" height="46" rx="2" fill="#4a2810" stroke="#3a1800" stroke-width="1"/>
+        <text x="90" y="206" text-anchor="middle" fill="#cca" font-size="7.5">GB200 Compute Tray 4</text>
+        <rect x="24" y="229" width="132" height="20" rx="2" fill="#2c3545" stroke="#3c4a60" stroke-width="1"/>
+        <text x="90" y="242" text-anchor="middle" fill="#8ad" font-size="7">NVLink 5 Switch</text>
+        <rect x="24" y="252" width="132" height="20" rx="2" fill="#2c3545" stroke="#3c4a60" stroke-width="1"/>
+        <text x="90" y="265" text-anchor="middle" fill="#8ad" font-size="7">NVLink 5 Switch</text>
+      </svg>
+    </div>
+  </div>
+
+  <div class="col-wrap">
+    <div class="col-label">GB200 Superchip</div>
+    <div class="panel">
+      <div class="panel-title">GB200 Superchip <span class="badge">Grace + Blackwell</span></div>
+      <svg viewBox="0 0 380 280" width="100%" style="max-height:300px;">
+        <rect x="2" y="2" width="376" height="276" rx="6" fill="#1e2a1e" stroke="#2e3a2e" stroke-width="2"/>
+        <text x="190" y="16" text-anchor="middle" fill="#6a9a6a" font-size="8" font-weight="700">GB200 Superchip — Blackwell GPU + Grace CPU</text>
+        <!-- Blackwell GPU 1 -->
+        <rect x="8" y="22" width="110" height="130" rx="3" fill="#8a6820" stroke="#c8a040" stroke-width="2"/>
+        <text x="63" y="75" text-anchor="middle" fill="#1a0a00" font-size="10" font-weight="800">Blackwell</text>
+        <text x="63" y="90" text-anchor="middle" fill="#2a1000" font-size="9" font-weight="700">GPU B200</text>
+        <text x="63" y="105" text-anchor="middle" fill="#3a2000" font-size="7">208B transistors</text>
+        <text x="63" y="117" text-anchor="middle" fill="#3a2000" font-size="6.5">TSMC N4P</text>
+        <!-- HBM3e beside GPU1 -->
+        <rect x="122" y="22" width="20" height="130" rx="2" fill="#802020" stroke="#b03030" stroke-width="1"/>
+        <text x="132" y="92" text-anchor="middle" fill="#fcc" font-size="6" transform="rotate(-90,132,92)">HBM3e × 4 stacks</text>
+        <!-- Grace CPU -->
+        <rect x="146" y="22" width="90" height="130" rx="3" fill="#3a5a40" stroke="#5a7a60" stroke-width="2"/>
+        <text x="191" y="75" text-anchor="middle" fill="#dfd" font-size="10" font-weight="800">Grace</text>
+        <text x="191" y="90" text-anchor="middle" fill="#cec" font-size="8" font-weight="700">CPU</text>
+        <text x="191" y="105" text-anchor="middle" fill="#bdb" font-size="7">72-core Neoverse</text>
+        <text x="191" y="118" text-anchor="middle" fill="#aba" font-size="6.5">TSMC N4</text>
+        <!-- HBM3e beside CPU -->
+        <rect x="240" y="22" width="20" height="130" rx="2" fill="#802020" stroke="#b03030" stroke-width="1"/>
+        <text x="250" y="92" text-anchor="middle" fill="#fcc" font-size="6" transform="rotate(-90,250,92)">LPDDR5X</text>
+        <!-- Blackwell GPU 2 -->
+        <rect x="264" y="22" width="110" height="130" rx="3" fill="#8a6820" stroke="#c8a040" stroke-width="2"/>
+        <text x="319" y="75" text-anchor="middle" fill="#1a0a00" font-size="10" font-weight="800">Blackwell</text>
+        <text x="319" y="90" text-anchor="middle" fill="#2a1000" font-size="9" font-weight="700">GPU B200</text>
+        <text x="319" y="105" text-anchor="middle" fill="#3a2000" font-size="7">208B transistors</text>
+        <!-- NVLink-C2C bus -->
+        <rect x="8" y="158" width="366" height="14" rx="3" fill="#1a2a1a" stroke="#76b900" stroke-width="1.5"/>
+        <text x="190" y="168" text-anchor="middle" fill="#76b900" font-size="7.5" font-weight="700">NVLink-C2C Bus — 900 GB/s</text>
+        <!-- specs below -->
+        <rect x="8" y="178" width="86" height="50" rx="3" fill="#1e2830" stroke="#2a3840" stroke-width="1"/>
+        <text x="51" y="196" text-anchor="middle" fill="#8acaca" font-size="7.5" font-weight="700">Per GPU</text>
+        <text x="51" y="208" text-anchor="middle" fill="#aaa" font-size="6.5">192 GB HBM3e</text>
+        <text x="51" y="218" text-anchor="middle" fill="#aaa" font-size="6.5">8 TB/s BW</text>
+        <text x="51" y="228" text-anchor="middle" fill="#aaa" font-size="6.5">20 PF FP4</text>
+        <rect x="100" y="178" width="90" height="50" rx="3" fill="#1e2830" stroke="#2a3840" stroke-width="1"/>
+        <text x="145" y="196" text-anchor="middle" fill="#8acaca" font-size="7.5" font-weight="700">Grace CPU</text>
+        <text x="145" y="208" text-anchor="middle" fill="#aaa" font-size="6.5">72 Neoverse V2</text>
+        <text x="145" y="218" text-anchor="middle" fill="#aaa" font-size="6.5">480 GB LPDDR5X</text>
+        <text x="145" y="228" text-anchor="middle" fill="#aaa" font-size="6.5">500 GB/s MC BW</text>
+        <rect x="196" y="178" width="90" height="50" rx="3" fill="#1e2830" stroke="#2a3840" stroke-width="1"/>
+        <text x="241" y="196" text-anchor="middle" fill="#8acaca" font-size="7.5" font-weight="700">Superchip</text>
+        <text x="241" y="208" text-anchor="middle" fill="#aaa" font-size="6.5">2× B200 + 1× Grace</text>
+        <text x="241" y="218" text-anchor="middle" fill="#aaa" font-size="6.5">Monolithic package</text>
+        <text x="241" y="228" text-anchor="middle" fill="#aaa" font-size="6.5">NVLink5 fabric</text>
+        <rect x="292" y="178" width="82" height="50" rx="3" fill="#1e2830" stroke="#2a3840" stroke-width="1"/>
+        <text x="333" y="196" text-anchor="middle" fill="#8acaca" font-size="7.5" font-weight="700">NVL72</text>
+        <text x="333" y="208" text-anchor="middle" fill="#aaa" font-size="6.5">72× B200 GPU</text>
+        <text x="333" y="218" text-anchor="middle" fill="#aaa" font-size="6.5">13.8 TB HBM3e</text>
+        <text x="333" y="228" text-anchor="middle" fill="#aaa" font-size="6.5">1.08 EF FP4</text>
+      </svg>
+    </div>
+  </div>
+
+  <div class="col-wrap">
+    <div class="col-label">Generation Comparison</div>
+    <div class="panel">
+      <div class="panel-title">Blackwell → Vera Rubin</div>
+      <table style="width:100%;font-size:12px;border-collapse:collapse;">
+        <thead>
+          <tr style="background:#f5f5f5;">
+            <th style="padding:7px;text-align:left;border-bottom:2px solid #76b900;color:#333;">Metric</th>
+            <th style="padding:7px;text-align:center;border-bottom:2px solid #76b900;color:#888;">GB300 NVL72</th>
+            <th style="padding:7px;text-align:center;border-bottom:2px solid #76b900;color:#76b900;">VR NVL144</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:1px solid #eee;"><td style="padding:6px 7px;color:#555;">GPU</td><td style="text-align:center;">Blackwell B200</td><td style="text-align:center;font-weight:600;color:#333;">Rubin R100</td></tr>
+          <tr style="border-bottom:1px solid #eee;background:#fafafa;"><td style="padding:6px 7px;color:#555;">CPU</td><td style="text-align:center;">Grace (Neoverse)</td><td style="text-align:center;font-weight:600;color:#333;">Vera (Olympus)</td></tr>
+          <tr style="border-bottom:1px solid #eee;"><td style="padding:6px 7px;color:#555;">Process</td><td style="text-align:center;">N4P</td><td style="text-align:center;font-weight:600;color:#333;">N3</td></tr>
+          <tr style="border-bottom:1px solid #eee;background:#fafafa;"><td style="padding:6px 7px;color:#555;">Memory type</td><td style="text-align:center;">HBM3e</td><td style="text-align:center;font-weight:600;color:#333;">HBM4</td></tr>
+          <tr style="border-bottom:1px solid #eee;"><td style="padding:6px 7px;color:#555;">FP4 (rack)</td><td style="text-align:center;">1.08 EF</td><td style="text-align:center;font-weight:600;color:#76b900;">3.6 EF</td></tr>
+          <tr style="border-bottom:1px solid #eee;background:#fafafa;"><td style="padding:6px 7px;color:#555;">BW (TB/s)</td><td style="text-align:center;">~5.8</td><td style="text-align:center;font-weight:600;color:#76b900;">13</td></tr>
+          <tr style="border-bottom:1px solid #eee;"><td style="padding:6px 7px;color:#555;">NVLink gen</td><td style="text-align:center;">NVLink 5</td><td style="text-align:center;font-weight:600;color:#333;">NVLink 6</td></tr>
+          <tr><td style="padding:6px 7px;color:#555;">Transistors</td><td style="text-align:center;">208B</td><td style="text-align:center;font-weight:600;color:#333;">336B</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat-item"><div class="stat-val">1.08<span class="stat-unit"> EF</span></div><div class="stat-label">FP4 Inference</div></div>
+    <div class="stat-item"><div class="stat-val">13.8<span class="stat-unit"> TB</span></div><div class="stat-label">HBM3e Total</div></div>
+    <div class="stat-item"><div class="stat-val">5.8<span class="stat-unit"> TB/s</span></div><div class="stat-label">HBM3e BW</div></div>
+    <div class="stat-item"><div class="stat-val">72</div><div class="stat-label">B200 GPUs</div></div>
+    <div class="stat-item"><div class="stat-val">36</div><div class="stat-label">Grace CPUs</div></div>
+    <div class="stat-item"><div class="stat-val">NVLink<span class="stat-unit"> 5</span></div><div class="stat-label">Fabric Gen</div></div>
+    <div class="stat-item"><div class="stat-val">N4P</div><div class="stat-label">TSMC Process</div></div>
+  </div>
+
+</div><!-- #tab-gb300 -->
+
+<!-- Tooltip -->
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+  function switchTab(id) {
+    document.querySelectorAll('.sys-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.content-area').forEach(c => c.classList.remove('active'));
+    document.querySelector(`#tab-${id}`).classList.add('active');
+    const idx = {nvl144:0,nvl72:1,gb300:2}[id];
+    document.querySelectorAll('.sys-tab')[idx].classList.add('active');
+  }
+
+  // Tooltip
+  const tooltip = document.getElementById('tooltip');
+  document.querySelectorAll('[data-tip]').forEach(el => {
+    el.style.cursor = 'pointer';
+    el.addEventListener('mousemove', e => {
+      tooltip.style.display = 'block';
+      tooltip.style.left = (e.clientX + 14) + 'px';
+      tooltip.style.top  = (e.clientY + 10) + 'px';
+      tooltip.textContent = el.getAttribute('data-tip');
+    });
+    el.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
+  });
+</script>
+</body>
+</html>
