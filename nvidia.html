@@ -16,12 +16,13 @@
 
   /* ── HEADER ── */
   .site-header {
-    background: #111;
+    background: #fff;
     padding: 18px 32px;
     display: flex;
     align-items: center;
     gap: 18px;
     border-bottom: 3px solid #76b900;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
   }
   .nv-logo {
     font-size: 22px;
@@ -29,11 +30,11 @@
     color: #76b900;
     letter-spacing: 1px;
   }
-  .header-divider { width: 1px; height: 36px; background: #444; }
+  .header-divider { width: 1px; height: 36px; background: #ddd; }
   .header-title {
     font-size: 18px;
     font-weight: 700;
-    color: #fff;
+    color: #111;
     line-height: 1.2;
   }
   .header-sub {
@@ -231,7 +232,8 @@
   /* ── STATS BAR ── */
   .stats-bar {
     margin-top: 24px;
-    background: #111;
+    background: #f4f6f8;
+    border-top: 2px solid #e0e0e0;
     padding: 16px 32px;
     display: flex;
     flex-wrap: wrap;
@@ -243,18 +245,18 @@
     flex-direction: column;
     align-items: center;
     padding: 8px 16px;
-    border-right: 1px solid #333;
+    border-right: 1px solid #ddd;
   }
   .stat:last-child { border-right: none; }
   .stat-val {
     font-size: 20px;
     font-weight: 800;
-    color: #76b900;
+    color: #5a8f00;
     line-height: 1;
   }
   .stat-lbl {
     font-size: 10px;
-    color: #888;
+    color: #666;
     margin-top: 4px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -279,7 +281,8 @@
     text-align: center;
     padding: 10px;
     font-size: 10px;
-    color: #bbb;
+    color: #999;
+    background: #f4f6f8;
   }
 
   /* ── RESPONSIVE ── */
