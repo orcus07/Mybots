@@ -1,0 +1,411 @@
+:root {
+  --bg: #f4f6f8;
+  --panel: #ffffff;
+  --border: #e2e6ea;
+  --text: #1f2933;
+  --muted: #7b8794;
+  --primary: #2563eb;
+  --primary-dark: #1d4ed8;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.7;
+}
+
+/* ── 헤더 ───────────────────────────────────────────── */
+header {
+  padding: 20px 32px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.header-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+header h1 { font-size: 22px; }
+.subtitle { margin-top: 4px; color: var(--muted); font-size: 14px; }
+
+.btn-archive {
+  font: inherit;
+  font-size: 14px;
+  padding: 8px 16px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--text);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.btn-archive:hover { background: #e8edf2; }
+
+.warning {
+  margin-top: 12px;
+  padding: 8px 14px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #9a3412;
+}
+
+/* ── 메인 뷰 ─────────────────────────────────────────── */
+main {
+  max-width: 860px;
+  margin: 32px auto;
+  padding: 0 20px;
+}
+
+.upload-area {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 28px;
+  margin-bottom: 28px;
+}
+
+/* 맥락 입력 */
+.context-row {
+  margin-bottom: 6px;
+}
+
+.context-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+
+.optional {
+  font-size: 11px;
+  font-weight: 400;
+  background: #e0e7ff;
+  color: #3730a3;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+#context-input {
+  width: 100%;
+  font: inherit;
+  font-size: 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  resize: vertical;
+  line-height: 1.6;
+  color: var(--text);
+}
+#context-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px #dbeafe;
+}
+
+.context-hint {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 5px;
+}
+
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 18px 0;
+}
+
+input[type="file"] {
+  font: inherit;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  margin-bottom: 14px;
+}
+
+.run-bar { display: flex; align-items: center; gap: 14px; }
+
+.btn-primary {
+  font: inherit;
+  padding: 10px 24px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 15px;
+}
+.btn-primary:hover { background: var(--primary-dark); }
+.btn-primary:disabled { opacity: 0.6; cursor: default; }
+
+#status { font-size: 13px; color: var(--muted); }
+
+/* 진행 로그 (터미널 스타일) */
+.progress-log {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  background: #0f172a;
+  color: #cbd5e1;
+  border-radius: 10px;
+  font-family: "SFMono-Regular", "Consolas", "Menlo", monospace;
+  font-size: 12.5px;
+  line-height: 1.65;
+  max-height: 200px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.progress-log li { margin: 0; padding: 1px 0; }
+.progress-log li:last-child { color: #fff; font-weight: 600; }
+
+/* 저장 토스트 */
+.save-toast {
+  background: #166534;
+  color: #fff;
+  font-size: 14px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+/* ── 결과 블록 ───────────────────────────────────────── */
+.result-block {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 20px;
+}
+
+.block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.block-header h2 { font-size: 17px; }
+
+.copy-btn {
+  font: inherit;
+  font-size: 12px;
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.copy-btn:hover { background: var(--bg); }
+
+/* 마크다운 */
+.markdown-body { font-size: 14px; line-height: 1.75; }
+.markdown-body h2 { font-size: 15px; font-weight: 700; margin: 18px 0 6px; color: #1d4ed8; }
+.markdown-body h3 { font-size: 14px; font-weight: 700; margin: 14px 0 4px; }
+.markdown-body ul { padding-left: 18px; margin: 6px 0; }
+.markdown-body li { margin-bottom: 4px; }
+.markdown-body strong { font-weight: 700; }
+.markdown-body p { margin-bottom: 8px; }
+
+/* 원문 */
+.transcript-block { background: #fafafa; }
+#transcript-content,
+.transcript-pre {
+  font-size: 13px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  color: var(--muted);
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+/* ── 보관함 뷰 ───────────────────────────────────────── */
+#archive-view {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 0 20px 40px;
+}
+
+.archive-topbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 20px 0 16px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 20px;
+}
+
+.archive-topbar h2 { font-size: 18px; flex: 1; }
+
+.btn-back {
+  font: inherit;
+  font-size: 14px;
+  padding: 7px 14px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--text);
+}
+.btn-back:hover { background: #e8edf2; }
+
+.archive-count {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.archive-empty {
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+  padding: 60px 20px;
+  line-height: 2;
+}
+
+/* 보관함 카드 */
+.archive-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin-bottom: 14px;
+}
+
+.archive-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.archive-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.archive-date {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.archive-filename {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.context-badge {
+  display: inline-block;
+  font-size: 12px;
+  color: #3730a3;
+  background: #e0e7ff;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-top: 2px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.archive-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.btn-expand {
+  font: inherit;
+  font-size: 12px;
+  padding: 5px 14px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.btn-expand:hover { background: var(--primary-dark); }
+
+.btn-delete {
+  font: inherit;
+  font-size: 13px;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-delete:hover { background: #fee2e2; border-color: #fca5a5; color: #b91c1c; }
+
+.archive-preview {
+  font-size: 13px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.archive-body {
+  margin-top: 16px;
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.archive-section {
+  background: var(--bg);
+  border-radius: 10px;
+  padding: 16px 18px;
+}
+
+.archive-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.archive-section-header h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.archive-section.transcript-block { background: #fafafa; }
+
+.hidden { display: none !important; }
+
+@media (max-width: 600px) {
+  header { padding: 16px; }
+  main, #archive-view { padding: 0 12px; }
+  main { margin-top: 20px; }
+}
